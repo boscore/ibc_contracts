@@ -11,22 +11,23 @@ print_usage(){
 eosio_cdt_version=1.4
 bos_cdt_version=2.0.1
 
-ARCH=$( uname )
-unset set_tag
-if [ "$ARCH" == "Darwin" ]; then
-    sed_tag="\'\'"
-fi
-
 if [ "$1" == "bos.cdt" ];then
-    sed -i ${sed_tag} 's/set(EOSIO_CDT_VERSION_MIN.*/set(EOSIO_CDT_VERSION_MIN "'${bos_cdt_version}'")/g'             ./CMakeLists.txt
-    sed -i ${sed_tag} 's/set(EOSIO_CDT_VERSION_SOFT_MAX.*/set(EOSIO_CDT_VERSION_SOFT_MAX "'${bos_cdt_version}'")/g'   ./CMakeLists.txt
+    cdt_version=${bos_cdt_version}
 elif [ "$1" == "eosio.cdt" ];then
-    sed -i ${sed_tag} 's/set(EOSIO_CDT_VERSION_MIN.*/set(EOSIO_CDT_VERSION_MIN "'${eosio_cdt_version}'")/g'           ./CMakeLists.txt
-    sed -i ${sed_tag} 's/set(EOSIO_CDT_VERSION_SOFT_MAX.*/set(EOSIO_CDT_VERSION_SOFT_MAX "'${eosio_cdt_version}'")/g' ./CMakeLists.txt
+    cdt_version=${eosio_cdt_version}
 else
     print_usage && exit 0
 fi
 
+ARCH=$( uname )
+unset set_tag
+if [ "$ARCH" == "Darwin" ]; then
+    sed -i '' 's/set(EOSIO_CDT_VERSION_MIN.*/set(EOSIO_CDT_VERSION_MIN "'${cdt_version}'")/g'           ./CMakeLists.txt
+    sed -i '' 's/set(EOSIO_CDT_VERSION_SOFT_MAX.*/set(EOSIO_CDT_VERSION_SOFT_MAX "'${cdt_version}'")/g' ./CMakeLists.txt
+else
+    sed -i 's/set(EOSIO_CDT_VERSION_MIN.*/set(EOSIO_CDT_VERSION_MIN "'${cdt_version}'")/g'              ./CMakeLists.txt
+    sed -i 's/set(EOSIO_CDT_VERSION_SOFT_MAX.*/set(EOSIO_CDT_VERSION_SOFT_MAX "'${cdt_version}'")/g'    ./CMakeLists.txt
+fi
 
 printf "\t=========== Building eosio.contracts ===========\n\n"
 
