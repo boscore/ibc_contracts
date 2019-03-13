@@ -141,8 +141,6 @@ namespace eosio {
 
       auto it = _sections.begin();
       auto next = ++it;
-      eosio_assert( next != _sections.end(), "can not delete");
-      next = ++it;
       eosio_assert( next != _sections.end(), "can not delete the last section");
       eosio_assert( next->valid == true, "next section must be valid");
 
