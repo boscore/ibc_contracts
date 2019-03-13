@@ -640,6 +640,7 @@ namespace eosio {
       eosio_assert( false == is_orig_trx_id_exist_in_cashtrxs_tb(orig_trx_id), "orig_trx_id already exist");      // important! used to prevent replay attack
 
       const transaction_receipt& trx_receipt = unpack<transaction_receipt>( orig_trx_packed_trx_receipt );
+      eosio_assert( trx_receipt.status == transaction_receipt::executed, "trx_receipt.status must be executed");
       packed_transaction pkd_trx = std::get<packed_transaction>(trx_receipt.trx);
       transaction trxn = unpack<transaction>( pkd_trx.packed_trx );
       eosio_assert( trxn.actions.size() == 1, "transfer transaction contains more then one action" );
@@ -748,6 +749,7 @@ namespace eosio {
       eosio_assert( is_trx_id_exist_in_origtrxs_tb( orig_trx_id ), "orig_trx_id not exist in transfer table or not in init state");
 
       const transaction_receipt& trx_receipt = unpack<transaction_receipt>( cash_trx_packed_trx_receipt );
+      eosio_assert( trx_receipt.status == transaction_receipt::executed, "trx_receipt.status must be executed");
       packed_transaction pkd_trx = std::get<packed_transaction>(trx_receipt.trx);
       transaction trx = unpack<transaction>( pkd_trx.packed_trx );
       eosio_assert( trx.actions.size() == 1, "transfer transaction contains more then one action" );
@@ -758,6 +760,7 @@ namespace eosio {
       // check issue action
       cash_action_type args = unpack<cash_action_type>( trx.actions.front().data );
       transaction_receipt src_tf_trx_receipt = unpack<transaction_receipt>( args.orig_trx_packed_trx_receipt );
+      eosio_assert( src_tf_trx_receipt.status == transaction_receipt::executed, "trx_receipt.status must be executed");
       packed_transaction src_pkd_trx = std::get<packed_transaction>(src_tf_trx_receipt.trx);
       eosio_assert( std::memcmp(orig_trx_id.hash, src_pkd_trx.id().hash, 32) == 0, "orig_trx_id mismatch" );
 
