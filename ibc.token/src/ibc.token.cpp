@@ -246,7 +246,8 @@ namespace eosio {
                     max_daily_withdraw.symbol == max_supply.symbol &&
                     failed_fee_fixed.symbol == max_supply.symbol &&
                     min_once_withdraw.amount > 0 &&
-                    max_daily_withdraw.amount > min_once_withdraw.amount &&
+                    max_once_withdraw.amount > min_once_withdraw.amount &&
+                    max_daily_withdraw.amount > max_once_withdraw.amount &&
                     failed_fee_fixed.amount >= 0 , "invalid asset");
 
       eosio_assert( peerchain_sym.is_valid(), "peerchain_sym invalid");
@@ -745,8 +746,7 @@ namespace eosio {
                             const std::vector<capi_checksum256>&   cash_trx_merkle_path,
                             transaction_id_type                    cash_trx_id,
                             transaction_id_type                    orig_trx_id ) {
-
-      eosio_assert( is_trx_id_exist_in_origtrxs_tb( orig_trx_id ), "orig_trx_id not exist in transfer table or not in init state");
+      auto orig_action_info = get_orignal_action_by_trx_id( orig_trx_id );
 
       const transaction_receipt& trx_receipt = unpack<transaction_receipt>( cash_trx_packed_trx_receipt );
       eosio_assert( trx_receipt.status == transaction_receipt::executed, "trx_receipt.status must be executed");
@@ -772,6 +772,11 @@ namespace eosio {
 
       // validate transaction_mroot with lwc
       chain::assert_block_in_lib_and_trx_mroot_in_block( _gstate.ibc_chain_contract, cash_trx_block_num, cash_trx_merkle_path.back() );
+
+      // if orignal trx is withdraw, burn those token
+      if ( orig_action_info.contract == _self ){
+         sub_balance( _self, orig_action_info.quantity );
+      }
 
       // remove record in origtrxs table
       erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( orig_trx_id );
@@ -1114,10 +1119,11 @@ namespace eosio {
       _gmutable.origtrxs_tb_next_id += 1;
    }
 
-   bool token::is_trx_id_exist_in_origtrxs_tb( transaction_id_type trx_id ) {
+   transfer_action_info token::get_orignal_action_by_trx_id( transaction_id_type trx_id ) {
       auto idx = _origtrxs.get_index<"trxid"_n>();
-      auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
-      return it != idx.end();
+      auto itr = idx.find( fixed_bytes<32>(trx_id.hash) );
+      eosio_assert( itr != idx.end(), "orig_trx_id not exist");
+      return itr->action;
    }
 
    void token::erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( transaction_id_type  trx_id ){

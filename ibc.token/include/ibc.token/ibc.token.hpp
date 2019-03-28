@@ -374,7 +374,7 @@ namespace eosio {
 
       void origtrxs_emplace( transfer_action_info action );
       void rollback_trx( transaction_id_type trx_id );
-      bool is_trx_id_exist_in_origtrxs_tb( transaction_id_type trx_id );
+      transfer_action_info get_orignal_action_by_trx_id( transaction_id_type trx_id );
       void erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( transaction_id_type trx_id );
 
 
