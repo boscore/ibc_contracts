@@ -688,7 +688,9 @@ namespace eosio {
 
          add_balance( _self, new_quantity, _self );
          if( to != _self ) {
-            string new_memo = "from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " " + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-issue--> thischain " + to.to_string() + "(" + new_quantity.to_string() + ")";
+            string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
+               + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-issue--> thischain "
+               + to.to_string() + "(" + new_quantity.to_string() + ")";
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
@@ -722,7 +724,9 @@ namespace eosio {
          });
 
          if( to != _self ) {
-            string new_memo = "from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " " + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain " + to.to_string() + "(" + new_quantity.to_string() + ")";
+            string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
+               + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain "
+               + to.to_string() + "(" + new_quantity.to_string() + ")";
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
