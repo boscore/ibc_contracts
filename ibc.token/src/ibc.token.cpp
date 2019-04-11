@@ -909,8 +909,8 @@ namespace eosio {
                transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
                action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
             }
-            return;
          }
+
          _origtrxs.erase( record );
       }
    }
