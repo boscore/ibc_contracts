@@ -879,7 +879,7 @@ namespace eosio {
 
       for ( const auto& trx_id : trxs ){
          auto idx = _origtrxs.get_index<"trxid"_n>();
-         auto record = idx.get( fixed_bytes<32>(trx_id.hash) );
+         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash) );
          transfer_action_info action_info = record.action;
 
          if ( action_info.contract != _self ){  // rollback ibc transfer
@@ -922,8 +922,8 @@ namespace eosio {
 
       for ( const auto& trx_id : trxs ){
          auto idx = _origtrxs.get_index<"trxid"_n>();
-         auto it = idx.get( fixed_bytes<32>(trx_id.hash) );
-         _origtrxs.erase( it );
+         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash) );
+         _origtrxs.erase( record );
       }
    }
 
