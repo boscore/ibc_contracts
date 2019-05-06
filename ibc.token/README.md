@@ -111,7 +111,8 @@ ibctrx2's time slot are must cross-chain failed) must have failed across the cha
 Actions called by normal users
 -------------------------------
   void transfer( name from,name to,asset quantity, string memo );
-  
+  void open( name owner, const symbol_code& symcode, name ram_payer );
+  void close( name owner, const symbol_code& symcode );
   
 Actions called by administrator
 -------------------------------
@@ -347,46 +348,43 @@ Modify fee related members in currency_stats struct.
  - require auth of _self
 
 
-
   void fcrollback( const std::vector<transaction_id_type> trxs, string memo );
   void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo ); 
-  void trxbls( string action, const std::vector<transaction_id_type> trxs ); 
-  void acntbls( string action, const std::vector<name> accounts );
   void lockall(); 
   void unlockall();
-  void tmplock( uint32_t minutes );
-  void rmtmplock();
-  void open( name owner, const symbol_code& symcode, name ram_payer );
-  void close( name owner, const symbol_code& symcode );
-  void fcinit( );
+  void fcinit();
 
 
 
+Actions called by ibc_plugin
+-------------------------------
+
+  void cash( uint64_t                               seq_num,
+             const uint32_t                         orig_trx_block_num,
+             const std::vector<char>&               orig_trx_packed_trx_receipt,
+             const std::vector<capi_checksum256>&   orig_trx_merkle_path,
+             transaction_id_type                    orig_trx_id,    
+             name                                   to,             
+             asset                                  quantity,       
+             string                                 memo,
+             name                                   relay );
+
+
+  void cashconfirm( const uint32_t                         cash_trx_block_num,
+                    const std::vector<char>&               cash_trx_packed_trx_receipt,
+                    const std::vector<capi_checksum256>&   cash_trx_merkle_path,
+                    transaction_id_type                    cash_trx_id,   
+                    transaction_id_type                    orig_trx_id ); 
+
+
+  void rollback( const transaction_id_type trx_id, name relay );
+
+  void rmunablerb( const transaction_id_type trx_id, name relay );
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Troubleshooting
+---------------
 
 
 
