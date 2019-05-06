@@ -177,24 +177,11 @@ namespace eosio {
       [[eosio::action]]
       void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
 
-      // this action maybe needed when repairing the ibc system manually
-      [[eosio::action]]
-      void trxbls( string action, const std::vector<transaction_id_type> trxs );   // original transfer or withdraw transaction blanklist operation
-
-      [[eosio::action]]
-      void acntbls( string action, const std::vector<name> accounts );
-
       [[eosio::action]]
       void lockall();   // when locked, transfer, withdraw and cash action will not allowed to execute for all token
 
       [[eosio::action]]
       void unlockall();   // when unlocked, the restrictions caused by execute lockall function will be removed
-
-      [[eosio::action]]
-      void tmplock( uint32_t minutes );   // when executed, transfer, withdraw and cash action will not allowed to execute for all token for a period of time
-
-      [[eosio::action]]
-      void rmtmplock();   // when executed,  the restrictions caused by execute tmplock function will be removed
 
       [[eosio::action]]
       void open( name owner, const symbol_code& symcode, name ram_payer );
@@ -412,31 +399,6 @@ namespace eosio {
       uint64_t get_cashtrxs_tb_max_orig_trx_block_num();
       bool is_orig_trx_id_exist_in_cashtrxs_tb( transaction_id_type orig_trx_id );
 
-
-      struct [[eosio::table]] account_blacklist {
-         name    account;
-
-         uint64_t primary_key()const { return account.value; }
-      };
-      eosio::multi_index< "acntbls"_n, account_blacklist > _acntbls;
-
-      bool is_in_acntbls( name account );
-
-
-      struct [[eosio::table]] trx_blacklist {
-         uint64_t             id;
-         transaction_id_type  trx_id;
-
-         uint64_t primary_key()const { return id; }
-         fixed_bytes<32> by_trx_id()const { return fixed_bytes<32>(trx_id.hash); }
-      };
-      eosio::multi_index< "trxbls"_n, trx_blacklist,
-         indexed_by<"trxid"_n, const_mem_fun<trx_blacklist, fixed_bytes<32>, &trx_blacklist::by_trx_id> >
-      > _trxbls;
-
-      bool is_in_trxbls( transaction_id_type trx_id );
-
-
       // use to record removed unrollbackable transactions
       struct [[eosio::table]] deleted_unrollbackable_trx_info {
          uint64_t                id; // auto-increment
@@ -445,7 +407,6 @@ namespace eosio {
          uint64_t primary_key()const { return id; }
       };
       eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  _rmdunrbs;
-
 
       void withdraw( name from, name peerchain_receiver, asset quantity, string memo );
       void sub_balance( name owner, asset value );

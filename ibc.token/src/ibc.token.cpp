@@ -21,8 +21,6 @@ namespace eosio {
          _stats( _self, _self.value ),
          _origtrxs( _self, _self.value ),
          _cashtrxs( _self, _self.value ),
-         _acntbls( _self, _self.value ),
-         _trxbls( _self, _self.value ),
          _rmdunrbs( _self, _self.value )
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
@@ -417,8 +415,6 @@ namespace eosio {
 
       // check global state
       eosio_assert( is_global_active(), "global not active" );
-      // check account blacklist
-      eosio_assert( !is_in_acntbls( from ), "from is in blacklist" );
 
       const auto& acpt = get_currency_accept( original_contract );
       eosio_assert( acpt.active, "not active");
@@ -522,8 +518,6 @@ namespace eosio {
 
       // check global state
       eosio_assert( is_global_active(), "global not active" );
-      // check account blacklist
-      eosio_assert( !is_in_acntbls( from ), "from is in blacklist" );
 
       const auto& st = get_currency_stats( quantity.symbol.code() );
       eosio_assert( st.active, "not active");
@@ -628,9 +622,6 @@ namespace eosio {
 
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
-
-      // check transaction blacklist
-      eosio_assert( false == is_in_trxbls( orig_trx_id ), "transaction is in blacklist");
 
       auto sym = quantity.symbol;
       eosio_assert( sym.is_valid(), "invalid symbol name" );
@@ -927,45 +918,6 @@ namespace eosio {
       }
    }
 
-   // this action maybe needed when repairing the ibc system manually
-   void token::trxbls( string action, const std::vector<transaction_id_type> trxs ) {
-      require_auth( _self );
-      for ( const auto& trx_id : trxs ) {
-         auto idx = _trxbls.get_index<"trxid"_n>();
-         auto existing = idx.find( fixed_bytes<32>(trx_id.hash) );
-         if ( action == "add" ){
-            eosio_assert( existing == idx.end(), "transaction already exist");
-            _trxbls.emplace( _self, [&]( auto& r ) {
-               r.id = _trxbls.available_primary_key();
-               r.trx_id = trx_id;
-            });
-         } else if ( action == "remove") {
-            eosio_assert( existing != idx.end(), "transaction not exist");
-            idx.erase( existing );
-         } else {
-            eosio_assert(false,"unknown action");
-         }
-      }
-   }
-
-   void token::acntbls( string action, const std::vector<name> accounts ) {
-      require_auth( _self );
-      for ( const auto& account : accounts ) {
-         auto existing = _acntbls.find( account.value );
-         if ( action == "add" ){
-            eosio_assert( existing == _acntbls.end(), "transaction already exist");
-            _acntbls.emplace( _self, [&]( auto& r ) {
-               r.account = account;
-            });
-         } else if ( action == "remove") {
-            eosio_assert( existing != _acntbls.end(), "transaction not exist");
-            _acntbls.erase( existing );
-         } else {
-            eosio_assert(false,"unknown action");
-         }
-      }
-   }
-
    void token::lockall() {
       require_auth( _self );
       eosio_assert( _gstate.active == true, "_gstate.active == false, nothing to do");
@@ -977,26 +929,6 @@ namespace eosio {
    void token::unlockall() {
       require_auth( _self );
       eosio_assert( _gstate.active == false,  "_gstate.active == true, nothing to do");
-      _gstate.active = true;
-      _gstate.lock_start_time = 0;
-      _gstate.lock_minutes = 0;
-   }
-
-   void token::tmplock( uint32_t minutes ) {
-      require_auth( permission_level( _self, "tmplock"_n) );
-      eosio_assert( minutes <= 180, "minutes greater then 180" );
-      eosio_assert( _gstate.active == true, "_gstate.active == false, temporary lock is not allowed");
-
-      _gstate.active = false;
-      _gstate.lock_start_time = now();
-      _gstate.lock_minutes = minutes;
-   }
-
-   void token::rmtmplock(){
-      require_auth( permission_level( _self, "tmplock"_n) );
-      eosio_assert( _gstate.active == false, "_gstate.active == true, nothing to do");
-      eosio_assert( _gstate.lock_minutes != 0, "no tmplock to remove");
-
       _gstate.active = true;
       _gstate.lock_start_time = 0;
       _gstate.lock_minutes = 0;
@@ -1200,19 +1132,6 @@ namespace eosio {
       return true;
    }
 
-   // ---- account_blacklist related methods  ----
-   bool token::is_in_acntbls( name account ) {
-      return _acntbls.find( account.value ) != _acntbls.end();
-   }
-
-
-   // ---- trx_blacklist related methods  ----
-   bool token::is_in_trxbls( transaction_id_type trx_id ) {
-      auto idx = _trxbls.get_index<"trxid"_n>();
-      auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
-      return it != idx.end();
-   }
-
 } /// namespace eosio
 
 extern "C" {
@@ -1223,8 +1142,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close)
-            (fcinit) )
+            (lockall)(unlockall)(open)(close)(fcinit) )
          }
          return;
       }
