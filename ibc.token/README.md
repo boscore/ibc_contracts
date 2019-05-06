@@ -108,7 +108,11 @@ At this point, a value `last_confirmed_orig_trx_block_time_slot of _global_mutab
 Based on this value, we can judge that ibctrx1 (Actually, all ibc transactions records whose time slot is less than 
 ibctrx2's time slot are must cross-chain failed) must have failed across the chain, so we need to rollback ibctrx1.
 
-
+Actions called by normal users
+-------------------------------
+  void transfer( name from,name to,asset quantity, string memo );
+  
+  
 Actions called by administrator
 -------------------------------
 #### setglobal
@@ -254,17 +258,107 @@ Modify fee related members in currency_accept struct.
  - **fee_ratio** charge ratio, used when fee_mode == ratio
  - require auth of _self
  
- 
- 
+#### regpegtoken
+```
+  void regpegtoken( asset       max_supply,
+                    asset       min_once_withdraw,
+                    asset       max_once_withdraw,
+                    asset       max_daily_withdraw,
+                    uint32_t    max_wds_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
+                    name        administrator,
+                    name        peerchain_contract,
+                    symbol      peerchain_sym,
+                    name        failed_fee_mode,
+                    asset       failed_fee_fixed,
+                    double      failed_fee_ratio,
+                    bool        active ); // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
+
+```
+This action is used to register peg token.
+ - **max_supply** maximum supply
+ - **min_once_withdraw** minimum amount of single withdraw
+ - **max_once_withdraw** maximum amount of single withdraw
+ - **max_daily_withdraw** maximum amount of daily withdraw
+ - **max_wds_per_minute** maximum number of withdraws per minute, appropriate value range is [10,150];
+ - **administrator** this token's administrator, who can set some parameters related to this token.
+ - **peerchain_contract** the peg token's original token contract name on it's original chain.
+ - **peerchain_sym** the peg token's original token symbol on it's original chain.
+ - **failed_fee_mode** charging mode, must be "fixed" or "ratio"
+ - **failed_fee_fixed** if failed_fee_mode == fixed, use this value to calculate fee for the filed withdraw transaction.
+ - **failed_fee_ratio** if failed_fee_mode == ratio, use this value to calculate fee for the filed withdraw transaction.
+ - **active** set the initial active state of this peg token, 
+     when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
+ - require auth of _self
+
+Examples:  
+Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
+and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
+``` 
+run on EOS mainnet to register BOS's peg token, the peg token symbol is BOSPG:
+$ cleos push action ibc2token555 regpegtoken '["5000000.0000 BOSPG","0.1000 BOSPG","1000.0000 BOSPG",
+        "100000.0000 BOSPG",100,"bostokenadmi","eosio.token","4,BOS","fixed","0.0050 BOSPG",0,true]' -p ibc2token555
+run on BOS mainnet to register EOS's peg token, the peg token symbol is EOSPG:
+$ cleos push action ibc2token555 regpegtoken '["5000000.0000 EOSPG","0.1000 EOSPG","1000.0000 EOSPG",
+        "100000.0000 EOSPG",100,"eostokenadmi","eosio.token","4,EOS","fixed","0.0050 EOSPG",0,true]' -p ibc2token555
+```
+
+#### setpegasset
+``` 
+  void setpegasset( symbol_code symcode, string which, asset quantity )
+```
+Modify only one member of type `asset` in currency_stats struct.
+ - **symcode** the symcode of registered peg token.
+ - **which** must be one of "max_supply", "min_once_withdraw", "max_once_withdraw", "max_daily_withdraw".
+ - **quantity** the assets' value to be set.
+ - require auth of this token's administrator
+
+#### setpegint
+``` 
+  void setpegint( symbol_code symcode, string which, uint64_t value )
+```
+Modify only one member of type `int` in currency_stats struct.
+ - **symcode** the symcode of registered peg token.
+ - **which** must be "max_wds_per_minute".
+ - **value** the value to be set.
+ - require auth of this token's administrator
+
+#### setpegbool
+``` 
+  void setpegbool( symbol_code symcode, string which, bool value )
+```
+Modify only one member of type `bool` in currency_stats struct.
+ - **symcode** the symcode of registered peg token.
+ - **which** must be "active".
+ - **value** the bool value to be set.
+ - require auth of this token's administrator
+
+#### setpegtkfee
+``` 
+  void setpegtkfee( symbol_code symcode,
+                    name        fee_mode,
+                    asset       fee_fixed,
+                    double      fee_ratio )
+```
+Modify fee related members in currency_stats struct.
+ - **symcode** the symcode of registered peg token.
+ - **fee_mode** must be "fixed" or "ratio".
+ - **fee_fixed** fixed fee quota, used when fee_mode == fixed
+ - **fee_ratio** charge ratio, used when fee_mode == ratio
+ - require auth of _self
 
 
 
-
-
-
-
-
-
+  void fcrollback( const std::vector<transaction_id_type> trxs, string memo );
+  void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo ); 
+  void trxbls( string action, const std::vector<transaction_id_type> trxs ); 
+  void acntbls( string action, const std::vector<name> accounts );
+  void lockall(); 
+  void unlockall();
+  void tmplock( uint32_t minutes );
+  void rmtmplock();
+  void open( name owner, const symbol_code& symcode, name ram_payer );
+  void close( name owner, const symbol_code& symcode );
+  void fcinit( );
 
 
 
