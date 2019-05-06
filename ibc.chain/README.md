@@ -97,18 +97,18 @@ Actions called by administrator
 -------------------------------
 #### setlibdepth( lib_depth )
  - **lib_depth**, The range of this values is [50,330], the recommended value is 85
- - require auth is _self
+ - require auth of _self
 
 #### relay( action, relay )
  - **action**, the value must be "add" or "remove"
  - **relay**, the relay account
  - used to add or remove a relay account
- - require auth is _self
+ - require auth of _self
  
 #### fcinit( )
  - three table (_chaindb,_prodsches, _sections) will be clear.
  - this action is needed when repairing the ibc system manually
- - require auth is _self
+ - require auth of _self
 
 
 Actions called by ibc_plugin
@@ -119,7 +119,7 @@ Actions called by ibc_plugin
  - **blockroot_merkle**, the blockroot_merkle of this block
  - set the first block header of the light client, and all subsequent headers' validation is based on this header.
  - this action is called by ibc_plugin once automatically.
- - require auth is _self or any relay account,
+ - require auth of _self or any relay account,
 
 #### pushsection( headers, blockroot_merkle, relay )
  - **headers**, packed a bunch of headers' data.
@@ -127,19 +127,19 @@ Actions called by ibc_plugin
  - **relay**, the relay account
  - create a new section or add a bunch of continuous headers to an existing section
  - this action is called by ibc_plugin repeatedly as needed
- - require auth is relay,
+ - require auth of relay,
  
 #### rminvalidls( relay );
  - **relay**, the relay account
  - remove all headers data in `chaindb` of the latest section and section itself if its `valid` is false.
  - this action is rarely used
- - require auth is relay,
+ - require auth of relay,
 
 #### rmfirstsctn( relay )
  - **relay**, the relay account
  - delete old section and chaindb data in order to save contract memory consumption.
  - this function is called repeatedly by ibc_plugin
- - require auth is relay,
+ - require auth of relay,
 
 Resource requirement
 --------------------
@@ -147,5 +147,6 @@ It's better to have not less than 5Mb RAM, consumption of CPU and NET is very sm
 
 Troubleshooting
 ---------------
-If you want to reinitialize this contract, execute `fcinit()`, 
-This will clear three tables, but does not modify the value of lib_depth and the registered relay accounts.
+If you want to reinitialize this contract, call `fcinit()` please, 
+then the ibc_plugin can call `chaininit(...)` again to set the first header (like genesis block) of the light client. 
+This action will clear three tables, but does not modify the value of lib_depth and the registered relay accounts.

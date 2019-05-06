@@ -109,3 +109,196 @@ Based on this value, we can judge that ibctrx1 (Actually, all ibc transactions r
 ibctrx2's time slot are must cross-chain failed) must have failed across the chain, so we need to rollback ibctrx1.
 
 
+Actions called by administrator
+-------------------------------
+#### setglobal
+```
+  void setglobal( name       ibc_chain_contract,
+                  name       peerchain_name,
+                  name       peerchain_ibc_token_contract,
+                  uint32_t   max_origtrxs_table_records,
+                  uint32_t   cache_cashtrxs_table_records,
+                  uint32_t   max_original_trxs_per_block,
+                  bool       active );
+```
+ - **ibc_chain_contract** the ibc.chain contract account
+ - **peerchain_name** peer chain name, such as "eos","bos", 
+    used to verify the chain name in action `transfer`'s memo string after charactor '@'
+ - **peerchain_ibc_token_contract** the peer chain's ibc.token contract name, used to verify original IBC transactions.
+ - **max_origtrxs_table_records** maximum `origtrxs` table records, this variable not used currently, set 0 is ok.
+ - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
+ - **max_original_trxs_per_block** maximum original transactions per block, the recommended value is 5, 
+    the recommended range is [1-10]. If set greater then 10, 
+    the IBC system may not be able to handle such large throughput of IBC transactions.
+ - **active** set the initial global active state (_global_state.active).
+    Only when _global_state.active is true can the original IBC transaction be successfully executed.
+ - require auth of _self
+
+Examples:  
+The following examples assume that IBC systems are deployed between the EOS and BOS mainnet, 
+and we name the EOS mainnet in ibc.token contract 'eos', and BOS mainnet 'bos'.
+Suppose the ibc.token contracts on both chains are deployed on accounts with same name ibc2token555, then 
+```
+run on EOS mainnet to set _global_state:
+$ cleos push action ibc2token555 setglobal '["ibc2chain555","bos","ibc2token555",0,1000,5,true]' -p ibc2token555
+run on BOS mainnet to set _global_state:
+$ cleos push action ibc2token555 setglobal '["ibc2chain555","eos","ibc2token555",0,1000,5,true]' -p ibc2token555
+```
+
+#### regacpttoken
+``` 
+  void regacpttoken( name        original_contract,
+                     asset       max_accept,
+                     name        administrator,
+                     asset       min_once_transfer,
+                     asset       max_once_transfer,
+                     asset       max_daily_transfer,
+                     uint32_t    max_tfs_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
+                     string      organization,
+                     string      website,
+                     name        service_fee_mode,
+                     asset       service_fee_fixed,
+                     double      service_fee_ratio,
+                     name        failed_fee_mode,
+                     asset       failed_fee_fixed,
+                     double      failed_fee_ratio,
+                     bool        active,
+                     symbol      peerchain_sym );
+```
+This action is used to register acceptable token.
+ - **original_contract** account name of the token contract to be registered.
+ - **max_accept** maximum amount of receivable assets.
+ - **administrator** this token's administrator, who can set some parameters related to this token.
+ - **min_once_transfer** minimum amount of single transfer
+ - **max_once_transfer** maximum amount of single transfer
+ - **max_daily_transfer**  maximum amount of daily transfer
+ - **max_tfs_per_minute** maximum number of transfers per minute, appropriate value range is [10,150];
+ - **organization** organization name
+ - **website** official website address
+ - **service_fee_mode** charging mode, must be "fixed" or "ratio"
+ - **service_fee_fixed** if service_fee_mode == fixed, use this value to calculate the successful withdrawal fee.
+ - **service_fee_ratio** if service_fee_mode == ratio, use this value to calculate the successful withdrawal fee.
+ - **failed_fee_mode** charging mode, must be "fixed" or "ratio"
+ - **failed_fee_fixed** if failed_fee_mode == fixed, use this value to calculate fee for the filed original transaction.
+ - **failed_fee_ratio** if failed_fee_mode == ratio, use this value to calculate fee for the filed original transaction.
+ - **active** set the initial active state of this token, 
+    when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
+ - **peerchain_sym** the peg token symbol on the peer chain's ibc.token contract, can be same with the original token symbol or not.
+ - require auth of _self
+
+Examples:  
+Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
+and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
+``` 
+run on EOS mainnet to register token EOS of eosio.token contract:
+$ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 EOS","eostokenadmi","0.1000 EOS","1000.0000 EOS",
+        "100000.0000 EOS",100,"block.one","eos.io","fixed","0.0100 EOS",0,"fixed","0.0050 EOS",0,true,"4,EOSPG"]' -p ibc2token555
+run on BOS mainnet to register token BOS of eosio.token contract:
+$ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 BOS","bostokenadmi","0.1000 BOS","1000.0000 BOS",
+        "100000.0000 BOS",100,"boscore","boscore.io","fixed","0.0100 BOS",0,"fixed","0.0050 BOS",0,true,"4,BOSPG"]' -p ibc2token555
+```
+
+#### setacptasset
+``` 
+void setacptasset( name contract, string which, asset quantity );
+```
+Modify only one member of type `asset` in currency_accept struct.
+ - **contract** the name of one registered acceptable token contract.
+ - **which** must be one of "max_accept", "min_once_transfer", "max_once_transfer", "max_daily_transfer".
+ - **quantity** the assets' value to be set.
+ - require auth of this token's administrator
+  
+#### setacptstr
+``` 
+  void setacptstr( name contract, string which, string value );
+```
+Modify only one member of type `string` in currency_accept struct.
+ - **contract** the name of one registered acceptable token contract.
+ - **which** must be one of "organization", "website".
+ - **value** the value to be set.
+ - require auth of this token's administrator
+ 
+#### setacptint
+``` 
+  void setacptint( name contract, string which, uint64_t value );
+```
+Modify only one member of type `int` in currency_accept struct.
+ - **contract** the name of one registered acceptable token contract.
+ - **which** must be "max_tfs_per_minute".
+ - **value** the value to be set.
+ - require auth of _self
+ 
+#### setacptbool
+``` 
+  void setacptbool( name contract, string which, bool value );
+```
+Modify only one member of type `bool` in currency_accept struct.
+ - **contract** the name of one registered acceptable token contract.
+ - **which** must be "active".
+ - **value** the bool value to be set.
+ - require auth of this token's administrator
+ 
+#### setacptfee
+``` 
+  void setacptfee( name   contract,
+                   name   kind,
+                   name   fee_mode,
+                   asset  fee_fixed,
+                   double fee_ratio );
+```
+Modify fee related members in currency_accept struct.
+ - **contract** the name of one registered acceptable token contract.
+ - **kind** must be "success" or "failed".
+ - **fee_mode** must be "fixed" or "ratio".
+ - **fee_fixed** fixed fee quota, used when fee_mode == fixed
+ - **fee_ratio** charge ratio, used when fee_mode == ratio
+ - require auth of _self
+ 
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
