@@ -23,10 +23,10 @@ namespace eosio {
       _global.set( _gstate, _self );
    }
 
-   void chain::setglobal( const global_state& gs ){
+   void chain::setlibdepth( uint32_t lib_depth ){
       require_auth( _self );
-      eosio_assert( 50 <= gs.lib_depth && gs.lib_depth <= 400, "lib_depth range must be between 50 and 400" );
-      _gstate = gs;
+      eosio_assert( 50 <= lib_depth && lib_depth <= 330, "lib_depth must in range [50,330]" );
+      _gstate.lib_depth = lib_depth;
    }
 
    /**
@@ -216,42 +216,6 @@ namespace eosio {
          }
       }
       return false;
-   }
-
-   void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
-      static constexpr uint32_t range = ( 1 << 10 ) * 4;    // about 30 minutes
-      static constexpr uint32_t range_large = range * 6;    // about 3 hours
-      static constexpr uint32_t recent = range * 24;        // about 3 days
-      static constexpr uint32_t past = recent * 5;          // about 15 days
-
-      eosio_assert( is_relay( _self, relay ), "relay not found");
-      require_auth( relay );
-
-      eosio_assert( block_num % range == 0, "the block number should be integral multiple of 1024 * 4");
-
-      blkrtmkls _blkrtmkls( _self, relay.value );
-      auto exsiting = _blkrtmkls.find( block_num );
-      eosio_assert( exsiting == _blkrtmkls.end(), "the block's blockroot_merkle already exist" );
-
-      _blkrtmkls.emplace( _self, [&]( auto& r ) {
-         r.block_num = block_num;
-         r.merkle = merkle;
-      });
-
-      // reorgnize the list
-      if ( block_num <= recent || _blkrtmkls.begin() == _blkrtmkls.end() ){
-         return;
-      }
-
-      auto it = _blkrtmkls.lower_bound( block_num - recent );
-      while ( it != _blkrtmkls.end() && it->block_num < block_num - recent + range * 2 && it->block_num % range_large != 0  ){
-         _blkrtmkls.erase( it );
-         ++it;
-      }
-
-      while ( _blkrtmkls.begin()->block_num < block_num - past ){
-         _blkrtmkls.erase( _blkrtmkls.begin() );
-      }
    }
 
    // ---- private methods ----
@@ -633,6 +597,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle)(fcinit) )
+EOSIO_DISPATCH( eosio::chain, (setlibdepth)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(fcinit) )
 
 

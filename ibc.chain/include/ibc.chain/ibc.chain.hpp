@@ -81,17 +81,6 @@ namespace eosio {
    typedef eosio::multi_index< "relays"_n, relay_account > relays;
 
 
-   struct [[eosio::table("blkrtmkls"), eosio::contract("ibc.chain")]] blockroot_merkle_type {
-      uint64_t            block_num;
-      incremental_merkle  merkle;
-
-      uint64_t primary_key()const { return block_num; }
-
-      EOSLIB_SERIALIZE( blockroot_merkle_type, (block_num)(merkle) )
-   };
-   typedef eosio::multi_index< "blkrtmkls"_n, blockroot_merkle_type > blkrtmkls;
-
-
    class [[eosio::contract("ibc.chain")]] chain : public contract {
    private:
       chaindb                 _chaindb;
@@ -106,7 +95,7 @@ namespace eosio {
       ~chain();
 
       [[eosio::action]]
-      void setglobal( const global_state& gs );
+      void setlibdepth( uint32_t lib_depth );
 
       [[eosio::action]]
       void chaininit( const std::vector<char>&     header,
@@ -129,10 +118,6 @@ namespace eosio {
 
       [[eosio::action]]
       void relay( string action, name relay );
-
-      // called by ibc plugin
-      [[eosio::action]]
-      void blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay );
 
       static void assert_block_in_lib_and_trx_mroot_in_block( name          ibc_contract_account,
                                                               uint32_t      block_num,

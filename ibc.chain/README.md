@@ -1,9 +1,11 @@
 ibc.chain
------------
+---------
 
 This contract implements eosio blockchain lightweight client, it is also called SPV client in [Bitcoin](https://bitcoin.org/bitcoin.pdf)
 combine with merkle path validation, this lightweight client can be used to verify transaction existence.
 
+Contract Design
+---------------
 ### Core Concept
 In a blockchain with POW consensus, such as BTC and ETH, starting from a block number, 
 all block headers thereafter must be passed to the lightwight-client, then we can get a trusted light client. 
@@ -70,16 +72,7 @@ In a completely de-centralized environment, this value should be 325.
 In the ibc version 1.* contract, this value is set to be less than 325 due to the use of relay account privileges 
 and in order to reduce CPU and NET consumption, but in ibc version 2.*, it will be set to a constant of 325.
 
-### Actions and Functions
-
- - `chaininit(...)`  
-    Set the first block header of the light client, and all subsequent headers' validation is based on this header.
- - `pushsection(...)`  
-    This function is called by ibc_plugin to create a new section, 
-    or to add a bunch of continuous headers to an existing section.
- - `rmfirstsctn(...)`  
-    This function is called repeatedly by ibc_plugin to delete old section and chaindb data,
-    in order to save contract memory consumption.
+### Functions
  - `assert_block_in_lib_and_trx_mroot_in_block(...)`  
     This static function is called directly by the ibc.token contract to validate cross-chain transactions.
 
@@ -99,3 +92,60 @@ bellow are some possible ways of attacking they want to try and describe how thi
     plugin cannot push headers that are not signed by BPs, 
     so the plugin either chooses push headers signed by BPs or strikes.
 
+
+Actions called by administrator
+-------------------------------
+#### setlibdepth( lib_depth )
+ - **lib_depth**, The range of this values is [50,330], the recommended value is 85
+ - require auth is _self
+
+#### relay( action, relay )
+ - **action**, the value must be "add" or "remove"
+ - **relay**, the relay account
+ - used to add or remove a relay account
+ - require auth is _self
+ 
+#### fcinit( )
+ - three table (_chaindb,_prodsches, _sections) will be clear.
+ - this action is needed when repairing the ibc system manually
+ - require auth is _self
+
+
+Actions called by ibc_plugin
+----------------------------
+#### chaininit( header, active_schedule, blockroot_merkle )
+ - **header**, packed block header data.
+ - **active_schedule**, the active_schedule of this block
+ - **blockroot_merkle**, the blockroot_merkle of this block
+ - set the first block header of the light client, and all subsequent headers' validation is based on this header.
+ - this action is called by ibc_plugin once automatically.
+ - require auth is _self or any relay account,
+
+#### pushsection( headers, blockroot_merkle, relay )
+ - **headers**, packed a bunch of headers' data.
+ - **blockroot_merkle**, the blockroot_merkle of the first block of `headers`
+ - **relay**, the relay account
+ - create a new section or add a bunch of continuous headers to an existing section
+ - this action is called by ibc_plugin repeatedly as needed
+ - require auth is relay,
+ 
+#### rminvalidls( relay );
+ - **relay**, the relay account
+ - remove all headers data in `chaindb` of the latest section and section itself if its `valid` is false.
+ - this action is rarely used
+ - require auth is relay,
+
+#### rmfirstsctn( relay )
+ - **relay**, the relay account
+ - delete old section and chaindb data in order to save contract memory consumption.
+ - this function is called repeatedly by ibc_plugin
+ - require auth is relay,
+
+Resource requirement
+--------------------
+It's better to have not less than 5Mb RAM, consumption of CPU and NET is very small.
+
+Troubleshooting
+---------------
+If you want to reinitialize this contract, execute `fcinit()`, 
+This will clear three tables, but does not modify the value of lib_depth and the registered relay accounts.
