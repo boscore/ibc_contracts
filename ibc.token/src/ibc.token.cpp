@@ -414,7 +414,7 @@ namespace eosio {
       eosio_assert( info.chain == _gstate.peerchain_name , (string("chain name must be: ") + _gstate.peerchain_name.to_string()).c_str() );
 
       // check global state
-      eosio_assert( is_global_active(), "global not active" );
+      eosio_assert( _gstate.active, "global not active" );
 
       const auto& acpt = get_currency_accept( original_contract );
       eosio_assert( acpt.active, "not active");
@@ -517,7 +517,7 @@ namespace eosio {
       require_auth( from );
 
       // check global state
-      eosio_assert( is_global_active(), "global not active" );
+      eosio_assert( _gstate.active, "global not active" );
 
       const auto& st = get_currency_stats( quantity.symbol.code() );
       eosio_assert( st.active, "not active");
@@ -918,22 +918,6 @@ namespace eosio {
       }
    }
 
-   void token::lockall() {
-      require_auth( _self );
-      eosio_assert( _gstate.active == true, "_gstate.active == false, nothing to do");
-      _gstate.active = false;
-      _gstate.lock_start_time = 0;
-      _gstate.lock_minutes = 0;
-   }
-
-   void token::unlockall() {
-      require_auth( _self );
-      eosio_assert( _gstate.active == false,  "_gstate.active == true, nothing to do");
-      _gstate.active = true;
-      _gstate.lock_start_time = 0;
-      _gstate.lock_minutes = 0;
-   }
-
    void token::sub_balance( name owner, asset value ) {
       accounts from_acnts( _self, owner.value );
 
@@ -999,23 +983,6 @@ namespace eosio {
          _rmdunrbs.erase(_rmdunrbs.begin());
       }
       _gmutable = global_mutable();
-   }
-
-   // ---- global_state related methods ----
-   bool token::is_global_active(){
-      if ( _gstate.active == false ){
-         if ( _gstate.lock_start_time == 0 ){
-            return false;
-         } else if ( now() > _gstate.lock_start_time + _gstate.lock_minutes * 60 ) {
-            _gstate.active = true;
-            _gstate.lock_start_time = 0;
-            _gstate.lock_minutes = 0;
-            return true;
-         } else {
-            return false;
-         }
-      }
-      return true;
    }
 
    // ---- currency_accept related methods ----
@@ -1141,8 +1108,8 @@ extern "C" {
             EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
-            (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(open)(close)(fcinit) )
+            (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(fcinit)
+            (open)(close) )
          }
          return;
       }

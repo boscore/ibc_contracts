@@ -177,21 +177,15 @@ namespace eosio {
       [[eosio::action]]
       void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
 
+      // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void lockall();   // when locked, transfer, withdraw and cash action will not allowed to execute for all token
-
-      [[eosio::action]]
-      void unlockall();   // when unlocked, the restrictions caused by execute lockall function will be removed
+      void fcinit( ); //force init
 
       [[eosio::action]]
       void open( name owner, const symbol_code& symcode, name ram_payer );
 
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
-
-      // this action maybe needed when repairing the ibc system manually
-      [[eosio::action]]
-      void fcinit( ); //force init
 
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {
@@ -216,22 +210,16 @@ namespace eosio {
          uint32_t          max_origtrxs_table_records = 0;
          uint32_t          cache_cashtrxs_table_records = 0;
          uint32_t          max_original_trxs_per_block = 0;
-
          bool              active = true;  // use as global lock
-         uint32_t          lock_start_time = 0;
-         uint32_t          lock_minutes = 0;
 
          // explicit serialization macro is necessary, without this, error "Exceeded call depth maximum" will occur when call state_singleton.set(state)
          EOSLIB_SERIALIZE( global_state, (ibc_chain_contract)(peerchain_name)(peerchain_ibc_token_contract)(max_origtrxs_table_records)
-               (cache_cashtrxs_table_records)(max_original_trxs_per_block)(active)(lock_start_time)(lock_minutes) )
+               (cache_cashtrxs_table_records)(max_original_trxs_per_block)(active) )
       };
 
    private:
       eosio::singleton< "globals"_n, global_state >   _global_state;
       global_state                                    _gstate;
-
-      bool is_global_active();
-
 
       struct [[eosio::table("globalm")]] global_mutable {
          global_mutable(){}
