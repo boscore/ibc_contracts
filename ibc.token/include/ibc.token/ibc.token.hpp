@@ -171,11 +171,11 @@ namespace eosio {
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void fcrollback( const std::vector<transaction_id_type> trxs, string memo );   // force rollback
+      void fcrollback( const std::vector<transaction_id_type> trxs );   // force rollback
 
       // this action maybe needed when can not rollback (because eosio account can refuse transfer token to it)
       [[eosio::action]]
-      void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
+      void fcrmorigtrx( const std::vector<transaction_id_type> trxs );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]

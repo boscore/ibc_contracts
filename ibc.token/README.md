@@ -347,11 +347,14 @@ Modify fee related members in currency_stats struct.
  - **fee_ratio** charge ratio, used when fee_mode == ratio
  - require auth of _self
 
-
+#### fcrollback
+``` 
   void fcrollback( const std::vector<transaction_id_type> trxs, string memo );
+```
+
+
+
   void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo ); 
-  void lockall(); 
-  void unlockall();
   void fcinit();
 
 

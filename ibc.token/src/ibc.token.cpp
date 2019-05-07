@@ -863,9 +863,8 @@ namespace eosio {
    }
 
    // this action maybe needed when repairing the ibc system manually
-   void token::fcrollback( const std::vector<transaction_id_type> trxs, string memo ) {
+   void token::fcrollback( const std::vector<transaction_id_type> trxs ) {
       require_auth( _self );
-      eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
       eosio_assert( trxs.size() != 0, "no transacton" );
 
       for ( const auto& trx_id : trxs ){
@@ -906,9 +905,8 @@ namespace eosio {
       }
    }
 
-   void token::fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo ){
+   void token::fcrmorigtrx( const std::vector<transaction_id_type> trxs ){
       require_auth( _self );
-      eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
       eosio_assert( trxs.size() != 0, "no transacton" );
 
       for ( const auto& trx_id : trxs ){
@@ -1122,4 +1120,3 @@ extern "C" {
       }
    }
 }
-
