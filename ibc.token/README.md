@@ -259,7 +259,7 @@ Modify fee related members in currency_stats struct.
   void fcrollback( const std::vector<transaction_id_type> trxs );
 ```
  - this action may be used when repairing IBC system, 
-   used to force rollback specified original transaction records in table `origtrxs`.
+   used to force rollback (refund) specified original transaction records in table `origtrxs`.
  - **trxs** original transactions that need to be rolled back.
 
 #### fcrmorigtrx
@@ -339,7 +339,7 @@ Actions called by ibc_plugin
   void rollback( const transaction_id_type trx_id, name relay );
 ```
  - called by ibc_plugin when there are original transactions need to be rolled back.
- - **trx_id**  transaction id, which need to be rolled back.
+ - **trx_id**  transaction id, which need to be rollback (refund).
  - **relay** relay account.
  
  
