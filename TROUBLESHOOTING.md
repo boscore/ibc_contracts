@@ -20,7 +20,9 @@ According to the BP signature verification logic in EOSIO,
 relay A needs to get blockroot_merkle of block 10000,
 but on ordinary nodes, only blockroot_merkle of blocks in forkdb can be obtained,
 so ibc_plugin uses the block's extension to record blockroot_merkle for some blocks.
-If in the process of using IBC, for some reason, relay A failed to obtain blockroot_merkle of block 10000,
+If in the process of using IBC, if for some reason, 
+such as the administrator change a normal fullnode to a relay node at header_num greater then 10000,
+relay A may failed to obtain blockroot_merkle of block 10000,
 then the subsequent cross-chain behavior can not be carried out.
 
 Restoration:  
