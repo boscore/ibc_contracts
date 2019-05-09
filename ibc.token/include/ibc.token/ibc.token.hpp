@@ -177,9 +177,15 @@ namespace eosio {
       [[eosio::action]]
       void fcrmorigtrx( const std::vector<transaction_id_type> trxs );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
 
+      [[eosio::action]]
+      void lockall();   // when locked, ibc-transfer and withdraw will not allowed to execute for all token
+
+      [[eosio::action]]
+      void unlockall();   // when unlocked, the restrictions caused by execute lockall function will be removed
+
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void fcinit( ); //force init
+      void forceinit( ); //force initialization of this contract
 
       [[eosio::action]]
       void open( name owner, const symbol_code& symcode, name ram_payer );

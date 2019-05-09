@@ -502,7 +502,7 @@ namespace eosio {
       }
    }
 
-   void chain::fcinit(){
+   void chain::forceinit(){
       require_auth(_self);
       while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
       while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
@@ -597,6 +597,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setlibdepth)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(fcinit) )
+EOSIO_DISPATCH( eosio::chain, (setlibdepth)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(forceinit) )
 
 

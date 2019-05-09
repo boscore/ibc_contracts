@@ -23,6 +23,7 @@ One cross-chain transaction is completed only when all the three independent tra
 The three transactions are, 1. original transaction, 2. cash transaction, 3. cash confirm transaction
 
  - **1. original transaction**  
+ // todo withdraw
 The original transaction refers to the cross-chain transfer transaction triggered by the user.
 The user calls the action *transfer* of a token contract, 
 and provides the information of the receiver account and the perr chain name in memo, then generate a original transaction.
@@ -349,19 +350,50 @@ Modify fee related members in currency_stats struct.
 
 #### fcrollback
 ``` 
-  void fcrollback( const std::vector<transaction_id_type> trxs, string memo );
+  void fcrollback( const std::vector<transaction_id_type> trxs );
 ```
+ - this action may be used when repairing IBC system, 
+   used to force rollback specified original transaction records in table `origtrxs`.
+ - **trxs** original transactions that need to be rolled back.
 
+#### fcrmorigtrx
+``` 
+  void fcrmorigtrx( const std::vector<transaction_id_type> trxs ); 
+```
+ - this action may be used when repairing IBC system, 
+   used to force remove specified original transaction records in table `origtrxs`.
+ - **trxs** original transactions that need to be remove.
 
+#### lockall
+``` 
+void lockall();
+```
+ - set 'active' of global_state false.
+ - when locked, ibc-transfer and withdraw will not allowed to execute for all token.
 
-  void fcrmorigtrx( const std::vector<transaction_id_type> trxs, string memo ); 
-  void fcinit();
+#### unlockall
+``` 
+void unlockall();
+```
+ - set 'active' of global_state true.
+ - when unlocked, the restrictions caused by execute lockall() will be removed.
 
-
+#### forceinit
+``` 
+  void forceinit();
+```
+ - force initialization of this contract.
+   this action clears three tables `origtrxs`, `cashtrxs` and `rmdunrbs` and a singleton `globalm`,
+   but it will not affect tables `globals`, `accepts` and `stats`.
+ - Note that this action deletes up to 200 table records at a time, in order to avoid CPU timeouts, 
+   so if the number of records in these three tables is greater than 200, 
+   you need to perform this action several times to clear all three tables.
+   When the console prints "force initialization complete", it says that all three tables have been cleared.
 
 Actions called by ibc_plugin
 -------------------------------
-
+#### cash
+``` 
   void cash( uint64_t                               seq_num,
              const uint32_t                         orig_trx_block_num,
              const std::vector<char>&               orig_trx_packed_trx_receipt,
@@ -371,23 +403,57 @@ Actions called by ibc_plugin
              asset                                  quantity,       
              string                                 memo,
              name                                   relay );
+```
+ - **seq_num** The serial number given by the ibc_plugin, incremented one by one from 1.
+ - **orig_trx_block_num** original transaction's block number.
+ - **orig_trx_packed_trx_receipt** original transaction's packed transaction receipt.
+ - **orig_trx_merkle_path** original transaction's merkle path to transaction merkleroot in block header.
+ - **orig_trx_id**  original transaction id.
+ - **to** to account, who receive token transfered from the peer chain.
+ - **quantity** quantity of token.
+ - **memo** not used.
+ - **relay** relay account.
 
-
+#### cashconfirm
+``` 
   void cashconfirm( const uint32_t                         cash_trx_block_num,
                     const std::vector<char>&               cash_trx_packed_trx_receipt,
                     const std::vector<capi_checksum256>&   cash_trx_merkle_path,
                     transaction_id_type                    cash_trx_id,   
                     transaction_id_type                    orig_trx_id ); 
+```
+ - **cash_trx_block_num** cash transaction block number.
+ - **cash_trx_packed_trx_receipt** cash transaction packed transaction receipt.
+ - **cash_trx_merkle_path** cash transaction's merkle path to transaction merkleroot in block header.
+ - **cash_trx_id** cash transaction id.
+ - **orig_trx_id** original transaction id of this cash transaction.
 
-
+#### rollback
+```
   void rollback( const transaction_id_type trx_id, name relay );
-
+```
+ - called by ibc_plugin when there are original transactions need to be rolled back.
+ - **trx_id**  transaction id, which need to be rolled back.
+ - **relay** relay account.
+ 
+ 
+#### rmunablerb
+```
   void rmunablerb( const transaction_id_type trx_id, name relay );
-
+```
+ - called by ibc_plugin when there are unrollbackable original transactions
+ - **trx_id**  transaction id, which need to be remove.
+ - **relay** relay account.
 
 
 Troubleshooting
 ---------------
+**Reinitialization**
+If you want to reinitialize this contract, please follow these steps:
+1. set global active state false, 
+
+
+
 
 
 

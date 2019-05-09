@@ -105,7 +105,7 @@ Actions called by administrator
  - used to add or remove a relay account
  - require auth of _self
  
-#### fcinit( )
+#### forceinit( )
  - three table (_chaindb,_prodsches, _sections) will be clear.
  - this action is needed when repairing the ibc system manually
  - require auth of _self
@@ -147,6 +147,7 @@ It's better to have not less than 5Mb RAM, consumption of CPU and NET is very sm
 
 Troubleshooting
 ---------------
-If you want to reinitialize this contract, call `fcinit()` please, 
+**Reinitialization**
+If you want to reinitialize this contract, call `forceinit()` please, 
 then the ibc_plugin can call `chaininit(...)` again to set the first header (like genesis block) of the light client. 
 This action will clear three tables, but does not modify the value of lib_depth and the registered relay accounts.

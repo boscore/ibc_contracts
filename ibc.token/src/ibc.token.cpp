@@ -623,6 +623,9 @@ namespace eosio {
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
 
+      // check global state
+      eosio_assert( _gstate.active, "global not active" );
+
       auto sym = quantity.symbol;
       eosio_assert( sym.is_valid(), "invalid symbol name" );
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
@@ -916,6 +919,41 @@ namespace eosio {
       }
    }
 
+   void token::lockall() {
+      require_auth( _self );
+      eosio_assert( _gstate.active == true, "_gstate.active == false, nothing to do");
+      _gstate.active = false;
+   }
+
+   void token::unlockall() {
+      require_auth( _self );
+      eosio_assert( _gstate.active == false,  "_gstate.active == true, nothing to do");
+      _gstate.active = true;
+   }
+
+   void token::forceinit( ) {
+      require_auth( _self );
+
+      uint32_t count = 0, max_delete_per_time = 200;
+      while ( _origtrxs.begin() != _origtrxs.end() && count++ < max_delete_per_time ){
+         _origtrxs.erase(_origtrxs.begin());
+      }
+      while ( _cashtrxs.begin() != _cashtrxs.end() && count++ < max_delete_per_time ){
+         _cashtrxs.erase(_cashtrxs.begin());
+      }
+      while ( _rmdunrbs.begin() != _rmdunrbs.end() && count++ < max_delete_per_time ){
+         _rmdunrbs.erase(_rmdunrbs.begin());
+      }
+
+      _gmutable = global_mutable();
+
+      if( _origtrxs.begin() != _origtrxs.end() && _cashtrxs.begin() != _cashtrxs.end() && _rmdunrbs.begin() != _rmdunrbs.end() ){
+         print( "force initialization complete" );
+      } else {
+         print( "force initialization not complete" );
+      }
+   }
+
    void token::sub_balance( name owner, asset value ) {
       accounts from_acnts( _self, owner.value );
 
@@ -965,22 +1003,6 @@ namespace eosio {
       eosio_assert( it != acnts.end(), "Balance row already deleted or never existed. Action won't have any effect." );
       eosio_assert( it->balance.amount == 0, "Cannot close because the balance is not zero." );
       acnts.erase( it );
-   }
-
-   void token::fcinit( ) {
-      require_auth( _self );
-
-      uint32_t count = 0, max_delete_per_time = 200;
-      while ( _origtrxs.begin() != _origtrxs.end() && count++ < max_delete_per_time ){
-         _origtrxs.erase(_origtrxs.begin());
-      }
-      while ( _cashtrxs.begin() != _cashtrxs.end() && count++ < max_delete_per_time ){
-         _cashtrxs.erase(_cashtrxs.begin());
-      }
-      while ( _rmdunrbs.begin() != _rmdunrbs.end() && count++ < max_delete_per_time ){
-         _rmdunrbs.erase(_rmdunrbs.begin());
-      }
-      _gmutable = global_mutable();
    }
 
    // ---- currency_accept related methods ----
@@ -1106,8 +1128,8 @@ extern "C" {
             EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
-            (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(fcinit)
-            (open)(close) )
+            (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
+            (lockall)(unlockall)(forceinit)(open)(close) )
          }
          return;
       }
