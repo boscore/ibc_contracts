@@ -8,7 +8,7 @@ print_usage(){
 	echo "$ build.sh bos.cdt"
 }
 
-eosio_cdt_version=1.4
+eosio_cdt_version=1.5
 bos_cdt_version=2.0.1
 
 if [ "$1" == "bos.cdt" ];then

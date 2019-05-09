@@ -150,7 +150,7 @@ namespace eosio {
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void fcinit( );
+      void forceinit( );
 
    private:
       void pushheader( const signed_block_header& header );
