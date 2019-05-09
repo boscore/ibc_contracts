@@ -63,7 +63,7 @@ How to Reinitialize the IBC System
 When you encounter a failure that cannot be repaired directly, you need to reinitialize the IBC system. 
 The specific steps are as follows
 
-### Step 1: Stop 2 relays nodes
+### Step 1: Stop two relay nodes
 
 ### Step 2: Lock all tokens
 Set ibc.token contract's singleton global's member `active` to false on Chain A and B to lock all token.
@@ -75,7 +75,7 @@ $ cleos push action ${ibc_token} lockall '[]' -p ${ibc_token}
 $ cleos get table ${ibc_token} ${ibc_token} global 
 ```
 
-### Step 3: Initialize ibc.chain contract
+### Step 3: Initialize two ibc.chain contracts
 run bellow commands on both chain A and B, then check contract status
 ``` 
 $ cleos push action ${ibc_chain} forceinit '[]' -p ${ibc_chain}
@@ -86,7 +86,7 @@ $ cleos get table  ${ibc_chain}  ${ibc_chain} prodsches
 $ cleos get table  ${ibc_chain}  ${ibc_chain} sections
 ```
 
-### Step 4: Initialize ibc.token contract
+### Step 4: Initialize two ibc.token contracts
 Initialization of ibc.token contracts is somewhat complicated and requires great care because it involves user assets.
 More importantly, there may be IBC transactions in the intermediate state.
 
@@ -98,8 +98,9 @@ we say that the IBC transaction is in the intermediate state.
 Only the first step of the IBC transaction has been executed, we say it is in `stage 1`.
 Only the first two steps of IBC transaction have been executed, we say it is in `stage 2`.
 
-**For transactions in stage 1, we need to rollback them first, then delete their records in table `origtrxs`.
-For transactions in stage 2, their token has been successfully transferred to the peer chain, 
+**For transactions in stage 1, we need to rollback them first, then delete their records in table `origtrxs`.**
+
+**For transactions in stage 2, their token has been successfully transferred to the peer chain, 
 so we only need to delete their records in table `origtrxs`, but do not rollback them, if rollback, it's double spend.**
 
 #### 4.1 Find out IBC transactions that start from chain A and rollback transactions that need to be rolled back.
