@@ -163,7 +163,7 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rollback( const transaction_id_type trx_id, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
+      void rollback( const transaction_id_type trx_id, name relay );   // check if any orignal transactions should be rollback, rollback them if have
 
       // called by ibc plugin repeatedly when there are unrollbackable original transactions
       [[eosio::action]]
@@ -231,7 +231,7 @@ namespace eosio {
          global_mutable(){}
 
          uint64_t    cash_seq_num = 0;    // set by seq_num in cash action from cashconfirm action, and must be increase one by one, and start from one
-         uint32_t    last_confirmed_orig_trx_block_time_slot = 0; // used to determine which failed original transactions should be rolled back
+         uint32_t    last_confirmed_orig_trx_block_time_slot = 0; // used to determine which failed original transactions should be rollback
          uint32_t    current_block_time_slot = 0;
          uint32_t    current_block_trxs = 0;
          uint64_t    origtrxs_tb_next_id = 1; // used to retain an incremental id for table origtrxs
