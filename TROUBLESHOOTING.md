@@ -21,7 +21,7 @@ relay A needs to get blockroot_merkle of block 10000,
 but on ordinary nodes, only blockroot_merkle of blocks in forkdb can be obtained,
 so ibc_plugin uses the block's extension to record blockroot_merkle for some blocks.
 If in the process of using IBC, if for some reason, 
-such as the administrator change a normal fullnode to a relay node at header_num greater then 10000,
+such as the administrator change a normal fullnode to a relay node at header_num greater than 10000,
 relay A may failed to obtain blockroot_merkle of block 10000,
 then the subsequent cross-chain behavior can not be carried out.
 
@@ -41,7 +41,7 @@ If there are two or more relay channels running simultaneously,
 suppose a new section 12000-12085 is created by one channel due to information asynchrony between channels,
 at this point, other relay channel can no longer push a section of 10000-10085,
 as a result, ibctx1 can no longer be validated, system logic goes into a dead corner.
-(There will be no such problem in the IBC v2 contrancts and ibc_plugin)
+(There will be no such problem in the IBC v2 contracts and ibc_plugin)
 
 Restoration:  
  - reinitialize the IBC system (see below for details).
