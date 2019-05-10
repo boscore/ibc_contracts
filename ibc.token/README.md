@@ -35,12 +35,12 @@ Actions called by administrator
 ```
  - **ibc_chain_contract** the ibc.chain contract account
  - **peerchain_name** peer chain name, such as "eos","bos", 
-    used to verify the chain name in action `transfer`'s memo string after charactor '@'
+    used to verify the chain name in action `transfer`'s memo string after character '@'
  - **peerchain_ibc_token_contract** the peer chain's ibc.token contract name, used to verify original IBC transactions.
  - **max_origtrxs_table_records** maximum `origtrxs` table records, this variable not used currently, set 0 is ok.
  - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
  - **max_original_trxs_per_block** maximum original transactions per block, the recommended value is 5, 
-    the recommended range is [1-10]. If set greater then 10, 
+    the recommended range is [1-10]. If set greater than 10, 
     the IBC system may not be able to handle such large throughput of IBC transactions.
  - **active** set the initial global active state (_global_state.active).
     Only when _global_state.active is true can the original IBC transaction be successfully executed.
