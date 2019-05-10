@@ -486,7 +486,7 @@ namespace eosio {
       eosio_assert( from != to, "cannot transfer to self" );
       require_auth( from );
 
-      eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
+      eosio_assert( memo.size() <= 512, "memo has more than 512 bytes" );
 
       if (  to == _self && memo.find("local") != 0 ) {
          auto info = get_memo_info( memo );
@@ -649,7 +649,7 @@ namespace eosio {
 
       eosio_assert( args.to == _gstate.peerchain_ibc_token_contract, "transfer to account not correct" );
       eosio_assert( args.quantity == quantity, "quantity not equal to quantity within packed transaction" );
-      const memo_info_type& memo_info = get_memo_info( args.memo );
+      memo_info_type memo_info = get_memo_info( args.memo );
 
       eosio_assert( to == memo_info.receiver, "to not equal to receiver，which provided in memo string" );
       eosio_assert( is_account( to ), "to account does not exist");
@@ -682,6 +682,7 @@ namespace eosio {
 
          add_balance( _self, new_quantity, _self );
          if( to != _self ) {
+            if ( memo_info.notes.size() > 256 ) memo_info.notes.resize( 256 );
             string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
                + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-issue--> thischain "
                + to.to_string() + "(" + new_quantity.to_string() + ")";
@@ -718,6 +719,7 @@ namespace eosio {
          });
 
          if( to != _self ) {
+            if ( memo_info.notes.size() > 256 ) memo_info.notes.resize( 256 );
             string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
                + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain "
                + to.to_string() + "(" + new_quantity.to_string() + ")";
