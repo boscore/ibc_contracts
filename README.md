@@ -16,5 +16,3 @@ if your host is installed bos.cdt, compile with the following command
 ```
 $ ./build.sh bos.cdt
 ```
-
-

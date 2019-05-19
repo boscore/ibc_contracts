@@ -949,7 +949,7 @@ namespace eosio {
 
       _gmutable = global_mutable();
 
-      if( _origtrxs.begin() != _origtrxs.end() && _cashtrxs.begin() != _cashtrxs.end() && _rmdunrbs.begin() != _rmdunrbs.end() ){
+      if( _origtrxs.begin() == _origtrxs.end() && _cashtrxs.begin() == _cashtrxs.end() && _rmdunrbs.begin() == _rmdunrbs.end() ){
          print( "force initialization complete" );
       } else {
          print( "force initialization not complete" );
