@@ -719,10 +719,11 @@ namespace eosio {
          });
 
          if( to != _self ) {
-            if ( memo_info.notes.size() > 256 ) memo_info.notes.resize( 256 );
+            if ( memo_info.notes.size() > 70 ) memo_info.notes.resize( 70 );
             string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
                + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain "
                + to.to_string() + "(" + new_quantity.to_string() + ")";
+            if ( new_memo.size() > 250 ) new_memo.resize( 250 );
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
