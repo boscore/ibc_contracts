@@ -30,19 +30,24 @@ namespace eosio {
 
    struct cash_action_type {
       uint64_t                               seq_num;
-      uint32_t                               orig_trx_block_num;
+      name                                   from_chain;
+      transaction_id_type                    orig_trx_id;
       std::vector<char>                      orig_trx_packed_trx_receipt;
       std::vector<capi_checksum256>          orig_trx_merkle_path;
-      transaction_id_type                    orig_trx_id;
+      uint32_t                               orig_trx_block_num;
+      std::vector<char>                      orig_trx_block_header_data;
+      std::vector<capi_checksum256>          orig_trx_block_id_merkle_path;
+      uint32_t                               anchor_block_num;
       name                                   to;
       asset                                  quantity;
       string                                 memo;
-      name                                   relay;
 
-      EOSLIB_SERIALIZE( cash_action_type, (seq_num)(orig_trx_block_num)(orig_trx_packed_trx_receipt)(orig_trx_merkle_path)(orig_trx_id)(to)(quantity)(memo)(relay) )
+      EOSLIB_SERIALIZE( cash_action_type, (seq_num)(from_chain)(orig_trx_id)(orig_trx_packed_trx_receipt)
+                        (orig_trx_merkle_path)(orig_trx_block_num)(orig_trx_block_header_data)
+                        (orig_trx_block_id_merkle_path)(anchor_block_num)(to)(quantity)(memo) )
    };
 
-   const static uint32_t default_max_trx_per_minute_per_token = 100;
+   const static uint32_t default_max_trxs_per_minute_per_token = 100;
 
    class [[eosio::contract("ibc.token")]] token : public contract {
       public:
@@ -50,33 +55,39 @@ namespace eosio {
       ~token();
 
       [[eosio::action]]
-      void setglobal( name       ibc_chain_contract,
-                      name       peerchain_name,
-                      name       peerchain_ibc_token_contract,
-                      uint32_t   max_origtrxs_table_records,
-                      uint32_t   cache_cashtrxs_table_records,
-                      uint32_t   max_original_trxs_per_block,
-                      bool       active );
+      void setglobal( name this_chain, bool active );
 
+      [[eosio::action]]
+      void regpeerchain( name           peerchain_name,
+                         string         peerchain_info,
+                         name           peerchain_ibc_token_contract,
+                         name           thischain_ibc_chain_contract,
+                         name           thischain_free_account,
+                         uint32_t       max_original_trxs_per_block,
+                         uint32_t       max_origtrxs_table_records,
+                         uint32_t       cache_cashtrxs_table_records,
+                         bool           active );
+
+      [[eosio::action]]
+      void setchainbool( name peerchain_name, string which, bool value );
 
       [[eosio::action]]
       void regacpttoken( name        original_contract,
+                         symbol      orig_token_symbol,  // redundant, facilitate indexing and checking
+                         symbol      peg_token_symbol,
                          asset       max_accept,
-                         name        administrator,
                          asset       min_once_transfer,
                          asset       max_once_transfer,
                          asset       max_daily_transfer,
-                         uint32_t    max_tfs_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
+                         uint32_t    max_tfs_per_minute, // 0 means the default value defined by default_max_trxs_per_minute_per_token
                          string      organization,
                          string      website,
+                         name        administrator,
                          name        service_fee_mode,
                          asset       service_fee_fixed,
                          double      service_fee_ratio,
-                         name        failed_fee_mode,
-                         asset       failed_fee_fixed,
-                         double      failed_fee_ratio,
-                         bool        active, // when non active, transfer not allowed, but cash trigger by peerchain withdraw can still execute
-                         symbol      peerchain_sym );
+                         asset       failed_fee,
+                         bool        active );  // when non active, transfer not allowed, but cash trigger by peerchain withdraw can still execute
 
       [[eosio::action]]
       void setacptasset( name contract, string which, asset quantity );
@@ -97,20 +108,19 @@ namespace eosio {
                        asset  fee_fixed,
                        double fee_ratio );
 
-
       [[eosio::action]]
-      void regpegtoken( asset       max_supply,
+      void regpegtoken( name        peerchain_name,
+                        name        peerchain_contract,  // the original token contract on peer chain
+                        symbol      orig_token_symbol,
+                        symbol      peg_token_symbol,    // redundant, facilitate indexing and checking
+                        asset       max_supply,
                         asset       min_once_withdraw,
                         asset       max_once_withdraw,
                         asset       max_daily_withdraw,
-                        uint32_t    max_wds_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
+                        uint32_t    max_wds_per_minute,  // 0 means the default value defined by default_max_trxs_per_minute_per_token
                         name        administrator,
-                        name        peerchain_contract,
-                        symbol      peerchain_sym,
-                        name        failed_fee_mode,
-                        asset       failed_fee_fixed,
-                        double      failed_fee_ratio,
-                        bool        active ); // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
+                        asset       failed_fee,
+                        bool        active );   // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
 
       [[eosio::action]]
       void setpegasset( symbol_code symcode, string which, asset quantity );
@@ -122,11 +132,7 @@ namespace eosio {
       void setpegbool( symbol_code symcode, string which, bool value );
 
       [[eosio::action]]
-      void setpegtkfee( symbol_code symcode,
-                        name        fee_mode,
-                        asset       fee_fixed,
-                        double      fee_ratio );
-
+      void setpegtkfee( symbol_code symcode, asset fee );
 
       // called in C apply function
       void transfer_notify( name    code,
@@ -143,39 +149,46 @@ namespace eosio {
 
       // called by ibc plugin
       [[eosio::action]]
-      void cash( uint64_t                               seq_num,
-                 const uint32_t                         orig_trx_block_num,
+      void cash( const uint64_t&                        seq_num,
+                 const name&                            from_chain,
+                 const transaction_id_type&             orig_trx_id,          // redundant, facilitate indexing and checking
                  const std::vector<char>&               orig_trx_packed_trx_receipt,
                  const std::vector<capi_checksum256>&   orig_trx_merkle_path,
-                 transaction_id_type                    orig_trx_id,    // redundant, facilitate indexing and checking
-                 name                                   to,             // redundant, facilitate indexing and checking
-                 asset                                  quantity,       // redundant, facilitate indexing and checking
-                 string                                 memo,
-                 name                                   relay );
+                 const uint32_t&                        orig_trx_block_num,   // redundant, facilitate indexing and checking
+                 const std::vector<char>&               orig_trx_block_header,
+                 const std::vector<capi_checksum256>&   orig_trx_block_id_merkle_path,
+                 const uint32_t&                        anchor_block_num,
+                 const name&                            to,                   // redundant, facilitate indexing and checking
+                 const asset&                           quantity,             // redundant, facilitate indexing and checking
+                 const string&                          memo );
 
       // called by ibc plugin
       [[eosio::action]]
-      void cashconfirm( const uint32_t                         cash_trx_block_num,
+      void cashconfirm( const name&                            from_chain,
+                        const transaction_id_type&             cash_trx_id,            // redundant, facilitate indexing and checking
                         const std::vector<char>&               cash_trx_packed_trx_receipt,
                         const std::vector<capi_checksum256>&   cash_trx_merkle_path,
-                        transaction_id_type                    cash_trx_id,   // redundant, facilitate indexing and checking
-                        transaction_id_type                    orig_trx_id ); // redundant, facilitate indexing and checking
+                        const uint32_t&                        cash_trx_block_num,     // redundant, facilitate indexing and checking
+                        const std::vector<char>&               cash_trx_block_header,
+                        const std::vector<capi_checksum256>&   cash_trx_block_id_merkle_path,
+                        const uint32_t&                        anchor_block_num,
+                        const transaction_id_type&             orig_trx_id );          // redundant, facilitate indexing and checking
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rollback( const transaction_id_type trx_id, name relay );   // check if any orignal transactions should be rollback, rollback them if have
+      void rollback( name peerchain_name, const transaction_id_type trx_id );   // check if any orignal transactions should be rollback, rollback them if have
 
       // called by ibc plugin repeatedly when there are unrollbackable original transactions
       [[eosio::action]]
-      void rmunablerb( const transaction_id_type trx_id, name relay );   // force to remove unrollbackable transaction
+      void rmunablerb( name peerchain_name, const transaction_id_type trx_id );   // force to remove unrollbackable transaction
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void fcrollback( const std::vector<transaction_id_type> trxs );   // force rollback
+      void fcrollback( name peerchain_name, const std::vector<transaction_id_type> trxs );   // force rollback
 
       // this action maybe needed when can not rollback (because eosio account can refuse transfer token to it)
       [[eosio::action]]
-      void fcrmorigtrx( const std::vector<transaction_id_type> trxs );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
+      void fcrmorigtrx( name peerchain_name, const std::vector<transaction_id_type> trxs );   // force remove original transaction records, the parameter must be trx_id, in order to query the original transaction conveniently in the later period.
 
       [[eosio::action]]
       void lockall();   // when locked, ibc-transfer and withdraw will not allowed to execute for all token
@@ -185,7 +198,7 @@ namespace eosio {
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
-      void forceinit( ); //force initialization of this contract
+      void forceinit( name peerchain_name ); //force init
 
       [[eosio::action]]
       void open( name owner, const symbol_code& symcode, name ram_payer );
@@ -210,56 +223,80 @@ namespace eosio {
       struct [[eosio::table("globals")]] global_state {
          global_state(){}
 
-         name              ibc_chain_contract;
-         name              peerchain_name;
-         name              peerchain_ibc_token_contract;
-         uint32_t          max_origtrxs_table_records = 0;
-         uint32_t          cache_cashtrxs_table_records = 0;
-         uint32_t          max_original_trxs_per_block = 0;
-         bool              active = true;  // use as global lock
+         name              this_chain;
+         bool              active = true; // use as global locks
 
          // explicit serialization macro is necessary, without this, error "Exceeded call depth maximum" will occur when call state_singleton.set(state)
-         EOSLIB_SERIALIZE( global_state, (ibc_chain_contract)(peerchain_name)(peerchain_ibc_token_contract)(max_origtrxs_table_records)
-               (cache_cashtrxs_table_records)(max_original_trxs_per_block)(active) )
+         EOSLIB_SERIALIZE( global_state, (this_chain)(active))
       };
 
    private:
       eosio::singleton< "globals"_n, global_state >   _global_state;
       global_state                                    _gstate;
 
-      struct [[eosio::table("globalm")]] global_mutable {
-         global_mutable(){}
+      // code,scope (_self,_self)
+      struct [[eosio::table("peerchains")]] peer_chain_state {
+         name           peerchain_name;
+         string         peerchain_info;
+         name           peerchain_ibc_token_contract;
+         name           thischain_ibc_chain_contract;
+         name           thischain_free_account; // used by IBC monitor system, transactions which transfer token from or to this account have no charge
+         uint32_t       max_original_trxs_per_block = 0;
+         uint32_t       max_origtrxs_table_records = 0;
+         uint32_t       cache_cashtrxs_table_records = 0;
+         bool           active = true;
 
+         uint64_t primary_key()const { return peerchain_name.value; }
+         EOSLIB_SERIALIZE( peer_chain_state, (peerchain_name)(peerchain_info)(peerchain_ibc_token_contract)
+                           (thischain_ibc_chain_contract)(thischain_free_account)(max_original_trxs_per_block)
+                           (max_origtrxs_table_records)(cache_cashtrxs_table_records)(active))
+      };
+      eosio::multi_index< "peerchains"_n, peer_chain_state > _peerchains;
+
+
+      // code,scope(_self,peerchain_name.value)
+      struct [[eosio::table("chainassets")]] peer_chain_asset {
+         asset    balance;
+
+         uint64_t primary_key()const { return balance.symbol.code().raw(); }
+      };
+      typedef eosio::multi_index< "chainassets"_n, peer_chain_asset > chainassets_table;
+
+
+      // code,scope (_self,_self)
+      struct [[eosio::table("peerchainm")]] peer_chain_mutable {
+         peer_chain_mutable(){}
+
+         name        peerchain_name;
          uint64_t    cash_seq_num = 0;    // set by seq_num in cash action from cashconfirm action, and must be increase one by one, and start from one
-         uint32_t    last_confirmed_orig_trx_block_time_slot = 0; // used to determine which failed original transactions should be rollback
+         uint32_t    last_confirmed_orig_trx_block_time_slot = 0; // used to determine which failed original transactions should be rolled back
          uint32_t    current_block_time_slot = 0;
          uint32_t    current_block_trxs = 0;
          uint64_t    origtrxs_tb_next_id = 1; // used to retain an incremental id for table origtrxs
 
-         EOSLIB_SERIALIZE( global_mutable, (cash_seq_num)(last_confirmed_orig_trx_block_time_slot)(current_block_time_slot)(current_block_trxs)(origtrxs_tb_next_id) )
+         uint64_t primary_key()const { return peerchain_name.value; }
+         EOSLIB_SERIALIZE( peer_chain_mutable, (peerchain_name)(cash_seq_num)(last_confirmed_orig_trx_block_time_slot)
+                           (current_block_time_slot)(current_block_trxs)(origtrxs_tb_next_id) )
       };
-      eosio::singleton< "globalm"_n, global_mutable > _global_mutable;
-      global_mutable                                  _gmutable;
+      eosio::multi_index< "peerchainm"_n, peer_chain_mutable > _peerchainm;
 
-
+      // code,scope (_self,_self)
       struct [[eosio::table]] currency_accept {
          name        original_contract;
+         symbol      peg_token_symbol;
          asset       accept;
          asset       max_accept;
          asset       min_once_transfer;
          asset       max_once_transfer;
          asset       max_daily_transfer;
-         uint32_t    max_tfs_per_minute;   // max transfer transactions per minute
-         symbol      peg_token_symbol;
-         name        administrator;
+         uint32_t    max_tfs_per_minute;  // max transfer transactions per minute
          string      organization;
          string      website;
+         name        administrator;
          name        service_fee_mode;    // "fixed"_n or "ratio"_n
          asset       service_fee_fixed;
          double      service_fee_ratio;
-         name        failed_fee_mode;     // "fixed"_n or "ratio"_n
-         asset       failed_fee_fixed;
-         double      failed_fee_ratio;
+         asset       failed_fee;
          asset       total_transfer;
          uint64_t    total_transfer_times;
          asset       total_cash;
@@ -276,11 +313,11 @@ namespace eosio {
          } mutables;
 
          uint64_t  primary_key()const { return original_contract.value; }
-         uint64_t  by_symbol()const { return accept.symbol.code().raw(); }
+         uint64_t  by_orig_token_symbol()const { return max_accept.symbol.code().raw(); }
          uint64_t  by_peg_token_symbol()const { return peg_token_symbol.code().raw(); }
       };
       eosio::multi_index< "accepts"_n, currency_accept,
-         indexed_by<"symbol"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_symbol> >,
+         indexed_by<"origtokensym"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_orig_token_symbol> >,
          indexed_by<"pegtokensym"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_peg_token_symbol> >
       > _accepts;
 
@@ -288,20 +325,19 @@ namespace eosio {
       const currency_accept& get_currency_accept_by_symbol( symbol_code symcode );
       const currency_accept& get_currency_accept_by_peg_token_symbol( symbol_code symcode );
 
-
+      // code,scope (_self,_self)
       struct [[eosio::table]] currency_stats {
          asset       supply;
          asset       max_supply;
          asset       min_once_withdraw;
          asset       max_once_withdraw;
          asset       max_daily_withdraw;
-         uint32_t    max_wds_per_minute;   // max withdraw transactions per minute
-         name        peerchain_contract;
-         symbol      orig_token_sym;
+         uint32_t    max_wds_per_minute;  // max withdraw transactions per minute
          name        administrator;
-         name        failed_fee_mode;      // "fixed"_n or "ratio"_n
-         asset       failed_fee_fixed;
-         double      failed_fee_ratio;
+         name        peerchain_name;
+         name        peerchain_contract;
+         symbol      orig_token_symbol;
+         asset       failed_fee;
          asset       total_issue;
          uint64_t    total_issue_times;
          asset       total_withdraw;
@@ -318,7 +354,7 @@ namespace eosio {
          } mutables;
 
          uint64_t primary_key()const { return supply.symbol.code().raw(); }
-         uint64_t  by_orig_token_sym()const { return orig_token_sym.code().raw(); }
+         uint64_t by_orig_token_sym()const { return orig_token_symbol.code().raw(); }
       };
       typedef eosio::multi_index< "stats"_n, currency_stats,
          indexed_by<"origtokensym"_n, const_mem_fun<currency_stats, uint64_t, &currency_stats::by_orig_token_sym> > > stats;
@@ -337,6 +373,7 @@ namespace eosio {
 
 
       // use to record accepted transfer and withdraw transactions
+      // code,scope(_self,peerchain_name.value)
       struct [[eosio::table]] original_trx_info {
          uint64_t                id; // auto-increment
          uint64_t                block_time_slot; // new record must not decrease time slot,
@@ -348,15 +385,15 @@ namespace eosio {
          uint64_t by_time_slot()const { return block_time_slot; }
          fixed_bytes<32> by_trx_id()const { return fixed_bytes<32>(trx_id.hash); }
       };
-      eosio::multi_index< "origtrxs"_n, original_trx_info,
+      typedef eosio::multi_index< "origtrxs"_n, original_trx_info,
          indexed_by<"tslot"_n, const_mem_fun<original_trx_info, uint64_t,        &original_trx_info::by_time_slot> >,  // used by ibc plugin
          indexed_by<"trxid"_n, const_mem_fun<original_trx_info, fixed_bytes<32>, &original_trx_info::by_trx_id> >
-      >  _origtrxs;
+      >  origtrxs_table;
 
-      void origtrxs_emplace( transfer_action_info action );
-      void rollback_trx( transaction_id_type trx_id );
-      transfer_action_info get_orignal_action_by_trx_id( transaction_id_type trx_id );
-      void erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( transaction_id_type trx_id );
+      void origtrxs_emplace( name peerchain_name, transfer_action_info action );
+      void rollback_trx( name peerchain_name, transaction_id_type trx_id );
+      transfer_action_info get_orignal_action_by_trx_id( name peerchain_name, transaction_id_type trx_id );
+      void erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( name peerchain_name, transaction_id_type trx_id );
 
 
       /**
@@ -368,6 +405,7 @@ namespace eosio {
        * The above two features must be satisfied at the same time. Breaking any one of them will lead to serious replay attacks.
        * set cache_cashtrxs_table_records parameter, when above feature satified, this parameter will take effect
        */
+      // code,scope(_self,peerchain_name.value)
       struct [[eosio::table]] cash_trx_info {
          uint64_t              seq_num; // set by seq_num in cash action, and must be increase one by one, and start from 1
          uint64_t              block_time_slot;
@@ -381,32 +419,33 @@ namespace eosio {
          fixed_bytes<32> by_orig_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
          uint64_t by_orig_trx_block_num()const { return orig_trx_block_num; }
       };
-      eosio::multi_index< "cashtrxs"_n, cash_trx_info,
+      typedef eosio::multi_index< "cashtrxs"_n, cash_trx_info,
          indexed_by<"tslot"_n,    const_mem_fun<cash_trx_info, uint64_t,        &cash_trx_info::by_time_slot> >,  // used by ibc plugin
          indexed_by<"trxid"_n,    const_mem_fun<cash_trx_info, fixed_bytes<32>, &cash_trx_info::by_orig_trx_id> >,
          indexed_by<"blocknum"_n, const_mem_fun<cash_trx_info, uint64_t,        &cash_trx_info::by_orig_trx_block_num> >
-      > _cashtrxs;
+      > cashtrxs_table;
 
-      void trim_cashtrxs_table_or_not();
-      uint64_t get_cashtrxs_tb_max_seq_num();
-      uint64_t get_cashtrxs_tb_min_orig_trx_block_num();
-      uint64_t get_cashtrxs_tb_max_orig_trx_block_num();
-      bool is_orig_trx_id_exist_in_cashtrxs_tb( transaction_id_type orig_trx_id );
+      void trim_cashtrxs_table_or_not( name peerchain_name );
+      uint64_t get_cashtrxs_tb_max_seq_num( name peerchain_name );
+      uint64_t get_cashtrxs_tb_min_orig_trx_block_num( name peerchain_name );
+      uint64_t get_cashtrxs_tb_max_orig_trx_block_num( name peerchain_name );
+      bool is_orig_trx_id_exist_in_cashtrxs_tb( name peerchain_name, transaction_id_type orig_trx_id );
 
       // use to record removed unrollbackable transactions
+      // code,scope(_self,peerchain_name.value)
       struct [[eosio::table]] deleted_unrollbackable_trx_info {
          uint64_t                id; // auto-increment
          transaction_id_type     trx_id;
 
          uint64_t primary_key()const { return id; }
       };
-      eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  _rmdunrbs;
+      typedef eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  rmdunrbs_table;
 
-      void withdraw( name from, name peerchain_receiver, asset quantity, string memo );
+
+      void withdraw( name from, name peerchain_name, name peerchain_receiver, asset quantity, string memo );
       void sub_balance( name owner, asset value );
       void add_balance( name owner, asset value, name ram_payer );
       void verify_merkle_path( const std::vector<capi_checksum256>& merkle_path, digest_type check );
    };
 
 } /// namespace eosio
-

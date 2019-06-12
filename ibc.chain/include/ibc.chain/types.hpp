@@ -14,6 +14,7 @@ namespace eosio {
 
    typedef capi_checksum256   digest_type;
    typedef capi_checksum256   block_id_type;
+   typedef capi_checksum256   chain_id_type;
    typedef capi_checksum256   transaction_id_type;
    typedef capi_signature     signature_type;
 

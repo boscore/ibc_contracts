@@ -1,4 +1,3 @@
-
 Troubleshooting
 ---------------
 
@@ -30,23 +29,9 @@ Restoration:
 for example 9000, and then start the relay node with this snapshot. 
 At this time, the relay node can get the blockroot_merkle of the 10000 blocks.
  - Second: reinitialize the IBC system (see below for details).
- 
- 
-#### 2. Enter the Dead Corner of Contract's Logic
-The IBC v1.* system can not use multiple relay pairs(also called relay channel), 
-and only one relay node is allowed in each chain.
-We assume that we need to validate a transaction in the 10000 blocks (ibctx1), 
-so we need to have a section in the ibc.chain contract that contains the 10000th header.
-If there are two or more relay channels running simultaneously,
-suppose a new section 12000-12085 is created by one channel due to information asynchrony between channels,
-at this point, other relay channel can no longer push a section of 10000-10085,
-as a result, ibctx1 can no longer be validated, system logic goes into a dead corner.
-(There will be no such problem in the IBC v2 contracts and ibc_plugin)
 
-Restoration:  
- - reinitialize the IBC system (see below for details).
- 
-#### 3. Accounts resources are insufficient
+
+#### 2. Accounts resources are insufficient
 There are three ibc-related accounts in each chain: relay account, ibc.token and ibc.chain contract accounts,
 ibc.token and ibc.chain accounts require sufficient RAM resources,
 it's recommended to allocate 5MB or more to ibc.chain and 10MB or more to ibc.token,
@@ -56,8 +41,8 @@ after purchasing enough RAM resources for the account, it can resume operation.
 The relay account is responsible for executing all cross-chain transactions and therefore 
 requires sufficient CPU and NET resources, if CPU or NET resources are insufficient during the operation, 
 cross-chain transactions will stop and the operation will resume after purchasing sufficient resources for the account.
- 
- 
+
+
 How to Reinitialize the IBC System
 ----------------------------------
 When you encounter a failure that cannot be repaired directly, you need to reinitialize the IBC system. 
@@ -91,7 +76,7 @@ Initialization of ibc.token contracts is somewhat complicated and requires great
 More importantly, there may be IBC transactions in the intermediate state.
 
 #### What is a intermediate state IBC transaction?
-For detailed principles, please refer to [ibc.token design document](abc).
+For detailed principles, please refer to [ibc.token design document](./ibc.token/README.md#contract-design).
 When a IBC transaction only takes the first step or the first two steps, 
 we say that the IBC transaction is in the intermediate state.
 

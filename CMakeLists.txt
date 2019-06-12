@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ibc_contracts VERSION 1.0.4)
+project(ibc_contract VERSION 2.0.0)
 
 set(EOSIO_CDT_VERSION_MIN "1.5")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")

@@ -1,7 +1,8 @@
 ibc.token
 ---------
-Combine with ibc.chain and ibc_plugin system, this contract allows users to do inter-blockchain assets transfer.
-
+This ibc.token contract can work in conjunction with multiple ibc.chain contracts, 
+enabling users to manage assets on multiple peer chains with one ibc.token contract account.
+Therefore, the BOS IBC system can be used to elegantly construct multi sidechains cross-chain network.
 
 Actions called by normal users
 ------------------------------
@@ -21,29 +22,45 @@ if to == _self and memo string does not start with "local", nor does it conform 
 this transaction must be fail.
 
 
-Actions called by administrator
--------------------------------
+Actions called by administrators
+-----------------------------------
+
 #### setglobal
 ```
-  void setglobal( name       ibc_chain_contract,
-                  name       peerchain_name,
-                  name       peerchain_ibc_token_contract,
-                  uint32_t   max_origtrxs_table_records,
-                  uint32_t   cache_cashtrxs_table_records,
-                  uint32_t   max_original_trxs_per_block,
-                  bool       active );
+  void setglobal( name this_chain, bool active );
 ```
- - **ibc_chain_contract** the ibc.chain contract account
- - **peerchain_name** peer chain name, such as "eos","bos", 
-    used to verify the chain name in action `transfer`'s memo string after character '@'
- - **peerchain_ibc_token_contract** the peer chain's ibc.token contract name, used to verify original IBC transactions.
+ - **this_chain** this chan's name, used to verify the chain name specified in the cross-chain transaction memo string
+ - **active** set the initial global active state (_global_state.active).
+    Only when _global_state.active is true can the original IBC transaction be successfully executed.
+ - require auth of _self
+
+#### regpeerchain
+``` 
+  void regpeerchain( name           peerchain_name,
+                     string         peerchain_info,
+                     name           peerchain_ibc_token_contract,
+                     name           thischain_ibc_chain_contract,
+                     name           thischain_free_account,
+                     uint32_t       max_original_trxs_per_block,
+                     uint32_t       max_origtrxs_table_records,
+                     uint32_t       cache_cashtrxs_table_records,
+                     bool           active );
+```
+
+ - **peerchain_name**， the name of the peer blockchain, 
+   used to verify the chain name in action `transfer`'s memo string after character '@'
+ - **peerchain_info**， information of the peer chain
+ - **peerchain_ibc_token_contract** the peer chain's ibc.token contract name, used to verify original IBC transactions
+ - **thischain_ibc_chain_contract** the corresponding ibc.chain contract account of the peer chain
+ - **thischain_free_account**, a account name, used by IBC monitor system, 
+   transactions which transfer token from or to this account have no charge
  - **max_origtrxs_table_records** maximum `origtrxs` table records, this variable not used currently, set 0 is ok.
- - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
  - **max_original_trxs_per_block** maximum original transactions per block, the recommended value is 5, 
     the recommended range is [1-10]. If set greater than 10, 
     the IBC system may not be able to handle such large throughput of IBC transactions.
- - **active** set the initial global active state (_global_state.active).
-    Only when _global_state.active is true can the original IBC transaction be successfully executed.
+ - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
+ - **active** set the initial active state (_peerchains.active).
+    Only when _peerchains.active is true can the original IBC transaction to this peer chain be successfully executed.
  - require auth of _self
 
 Examples:  
@@ -52,11 +69,21 @@ and we name the EOS mainnet in ibc.token contract 'eos', and BOS mainnet 'bos'.
 Suppose the ibc.token contracts on both chains are deployed on accounts with same name ibc2token555, then 
 ```
 run on EOS mainnet to set _global_state:
-$ cleos push action ibc2token555 setglobal '["ibc2chain555","bos","ibc2token555",0,1000,5,true]' -p ibc2token555
+$ cleos push action ibc2token555 regpeerchain '["bos","https://boscore.io",ibc2token555","ibc2chain555","eosfreeacnt1",5,1000,1000,true]' -p ibc2token555
 run on BOS mainnet to set _global_state:
-$ cleos push action ibc2token555 setglobal '["ibc2chain555","eos","ibc2token555",0,1000,5,true]' -p ibc2token555
+$ cleos push action ibc2token555 regpeerchain '["eos","https://eos.io",ibc2token555","ibc2chain555","bosfreeacnt1",5,1000,1000,true]' -p ibc2token555
 ```
 
+#### setchainbool
+``` 
+void setchainbool( name peerchain_name, string which, bool value );
+```
+ - **peerchain_name**, peer chain name
+ - **which**, must be 'active'
+ - **value**, bool value, set the active state (_peerchains.active).
+   Only when _peerchains.active is true can the original IBC transaction to this peer chain be successfully executed.
+ - require auth of _self
+ 
 #### regacpttoken
 ``` 
   void regacpttoken( name        original_contract,
@@ -71,9 +98,7 @@ $ cleos push action ibc2token555 setglobal '["ibc2chain555","eos","ibc2token555"
                      name        service_fee_mode,
                      asset       service_fee_fixed,
                      double      service_fee_ratio,
-                     name        failed_fee_mode,
-                     asset       failed_fee_fixed,
-                     double      failed_fee_ratio,
+                     asset       failed_fee,
                      bool        active,
                      symbol      peerchain_sym );
 ```
@@ -90,9 +115,7 @@ This action is used to register acceptable token.
  - **service_fee_mode** charging mode, must be "fixed" or "ratio"
  - **service_fee_fixed** if service_fee_mode == fixed, use this value to calculate the successful withdrawal fee.
  - **service_fee_ratio** if service_fee_mode == ratio, use this value to calculate the successful withdrawal fee.
- - **failed_fee_mode** charging mode, must be "fixed" or "ratio"
- - **failed_fee_fixed** if failed_fee_mode == fixed, use this value to calculate fee for the filed original transaction.
- - **failed_fee_ratio** if failed_fee_mode == ratio, use this value to calculate fee for the filed original transaction.
+ - **failed_fee** use this value to calculate fee for the filed original transaction.
  - **active** set the initial active state of this token, 
     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
  - **peerchain_sym** the peg token symbol on the peer chain's ibc.token contract, can be same with the original token symbol or not.
@@ -104,10 +127,10 @@ and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
 ``` 
 run on EOS mainnet to register token EOS of eosio.token contract:
 $ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 EOS","eostokenadmi","0.1000 EOS","1000.0000 EOS",
-        "100000.0000 EOS",100,"block.one","eos.io","fixed","0.0100 EOS",0,"fixed","0.0050 EOS",0,true,"4,EOSPG"]' -p ibc2token555
+        "100000.0000 EOS",100,"block.one","eos.io","fixed","0.0100 EOS",0,"0.0050 EOS",true,"4,EOSPG"]' -p ibc2token555
 run on BOS mainnet to register token BOS of eosio.token contract:
 $ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 BOS","bostokenadmi","0.1000 BOS","1000.0000 BOS",
-        "100000.0000 BOS",100,"boscore","boscore.io","fixed","0.0100 BOS",0,"fixed","0.0050 BOS",0,true,"4,BOSPG"]' -p ibc2token555
+        "100000.0000 BOS",100,"boscore","boscore.io","fixed","0.0100 BOS",0,"0.0050 BOS",true,"4,BOSPG"]' -p ibc2token555
 ```
 
 #### setacptasset
@@ -176,9 +199,7 @@ Modify fee related members in currency_accept struct.
                     name        administrator,
                     name        peerchain_contract,
                     symbol      peerchain_sym,
-                    name        failed_fee_mode,
-                    asset       failed_fee_fixed,
-                    double      failed_fee_ratio,
+                    asset       failed_fee,
                     bool        active ); // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
 
 ```
@@ -191,9 +212,7 @@ This action is used to register peg token.
  - **administrator** this token's administrator, who can set some parameters related to this token.
  - **peerchain_contract** the peg token's original token contract name on it's original chain.
  - **peerchain_sym** the peg token's original token symbol on it's original chain.
- - **failed_fee_mode** charging mode, must be "fixed" or "ratio"
- - **failed_fee_fixed** if failed_fee_mode == fixed, use this value to calculate fee for the filed withdraw transaction.
- - **failed_fee_ratio** if failed_fee_mode == ratio, use this value to calculate fee for the filed withdraw transaction.
+ - **failed_fee** use this value to calculate fee for the filed withdraw transaction.
  - **active** set the initial active state of this peg token, 
      when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
  - require auth of _self
@@ -204,10 +223,10 @@ and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
 ``` 
 run on EOS mainnet to register BOS's peg token, the peg token symbol is BOSPG:
 $ cleos push action ibc2token555 regpegtoken '["5000000.0000 BOSPG","0.1000 BOSPG","1000.0000 BOSPG",
-        "100000.0000 BOSPG",100,"bostokenadmi","eosio.token","4,BOS","fixed","0.0050 BOSPG",0,true]' -p ibc2token555
+        "100000.0000 BOSPG",100,"bostokenadmi","eosio.token","4,BOS","0.0050 BOSPG",true]' -p ibc2token555
 run on BOS mainnet to register EOS's peg token, the peg token symbol is EOSPG:
 $ cleos push action ibc2token555 regpegtoken '["5000000.0000 EOSPG","0.1000 EOSPG","1000.0000 EOSPG",
-        "100000.0000 EOSPG",100,"eostokenadmi","eosio.token","4,EOS","fixed","0.0050 EOSPG",0,true]' -p ibc2token555
+        "100000.0000 EOSPG",100,"eostokenadmi","eosio.token","4,EOS","0.0050 EOSPG",true]' -p ibc2token555
 ```
 
 #### setpegasset
@@ -242,52 +261,54 @@ Modify only one member of type `bool` in currency_stats struct.
 
 #### setpegtkfee
 ``` 
-  void setpegtkfee( symbol_code symcode,
-                    name        fee_mode,
-                    asset       fee_fixed,
-                    double      fee_ratio )
+  void setpegtkfee( symbol_code symcode, asset fee )
 ```
 Modify fee related members in currency_stats struct.
  - **symcode** the symcode of registered peg token.
- - **fee_mode** must be "fixed" or "ratio".
- - **fee_fixed** fixed fee quota, used when fee_mode == fixed
- - **fee_ratio** charge ratio, used when fee_mode == ratio
+ - **fee** fixed fee quota
  - require auth of _self
 
 #### fcrollback
 ``` 
-  void fcrollback( const std::vector<transaction_id_type> trxs );
+  void fcrollback( name peerchain_name, const std::vector<transaction_id_type> trxs );
 ```
  - this action may be used when repairing IBC system, 
    used to force rollback (refund) specified original transaction records in table `origtrxs`.
+ - **peerchain_name** peer chain name.
  - **trxs** original transactions that need to be rolled back.
+ - require auth of _self
 
 #### fcrmorigtrx
 ``` 
-  void fcrmorigtrx( const std::vector<transaction_id_type> trxs ); 
+  void fcrmorigtrx( name peerchain_name, const std::vector<transaction_id_type> trxs ); 
 ```
  - this action may be used when repairing IBC system, 
    used to force remove specified original transaction records in table `origtrxs`.
+ - **peerchain_name** peer chain name.
  - **trxs** original transactions that need to be remove.
-
+ - require auth of _self
+ 
 #### lockall
 ``` 
 void lockall();
 ```
  - set 'active' of global_state false.
  - when locked, ibc-transfer and withdraw will not allowed to execute for all token.
-
+ - require auth of _self
+ 
 #### unlockall
 ``` 
 void unlockall();
 ```
  - set 'active' of global_state true.
  - when unlocked, the restrictions caused by execute lockall() will be removed.
-
+ - require auth of _self
+ 
 #### forceinit
 ``` 
-  void forceinit();
+  void forceinit( name peerchain_name );
 ```
+ - **peerchain_name** peer chain name.
  - force initialization of this contract.
    this action clears three tables `origtrxs`, `cashtrxs` and `rmdunrbs` and a singleton `globalm`,
    but it will not affect tables `globals`, `accepts` and `stats`.
@@ -295,62 +316,81 @@ void unlockall();
    so if the number of records in these three tables is greater than 200, 
    you need to perform this action several times to clear all three tables.
    When the console prints "force initialization complete", it says that all three tables have been cleared.
+ - require auth of _self
+
 
 Actions called by ibc_plugin
 ----------------------------
 #### cash
 ``` 
-  void cash( uint64_t                               seq_num,
-             const uint32_t                         orig_trx_block_num,
+  void cash( const uint64_t&                        seq_num,
+             const name&                            from_chain,
+             const transaction_id_type&             orig_trx_id,          // redundant, facilitate indexing and checking
              const std::vector<char>&               orig_trx_packed_trx_receipt,
              const std::vector<capi_checksum256>&   orig_trx_merkle_path,
-             transaction_id_type                    orig_trx_id,    
-             name                                   to,             
-             asset                                  quantity,       
-             string                                 memo,
-             name                                   relay );
+             const uint32_t&                        orig_trx_block_num,   // redundant, facilitate indexing and checking
+             const std::vector<char>&               orig_trx_block_header,
+             const std::vector<capi_checksum256>&   orig_trx_block_id_merkle_path,
+             const uint32_t&                        anchor_block_num,
+             const name&                            to,                   // redundant, facilitate indexing and checking
+             const asset&                           quantity,             // redundant, facilitate indexing and checking
+             const string&                          memo );
 ```
  - **seq_num** The serial number given by the ibc_plugin, incremented one by one from 1.
- - **orig_trx_block_num** original transaction's block number.
+ - **from_chain** peer chain name.
+ - **orig_trx_id**  original transaction id.
  - **orig_trx_packed_trx_receipt** original transaction's packed transaction receipt.
  - **orig_trx_merkle_path** original transaction's merkle path to transaction merkleroot in block header.
- - **orig_trx_id**  original transaction id.
+ - **orig_trx_block_num** original transaction's block number.
+ - **orig_trx_block_header** original transaction's block header.
+ - **orig_trx_block_id_merkle_path** original transaction's block id merkle path to one active incremental_merkle node of the anchore block.
+ - **anchor_block_num** anchor block in table `chaindb` of ibc.chain contract
  - **to** to account, who receive token transfered from the peer chain.
  - **quantity** quantity of token.
  - **memo** not used.
- - **relay** relay account.
+ - can be called with any account's auth
 
 #### cashconfirm
 ``` 
-  void cashconfirm( const uint32_t                         cash_trx_block_num,
+  void cashconfirm( const name&                            from_chain,
+                    const transaction_id_type&             cash_trx_id,            // redundant, facilitate indexing and checking
                     const std::vector<char>&               cash_trx_packed_trx_receipt,
                     const std::vector<capi_checksum256>&   cash_trx_merkle_path,
-                    transaction_id_type                    cash_trx_id,   
-                    transaction_id_type                    orig_trx_id ); 
+                    const uint32_t&                        cash_trx_block_num,     // redundant, facilitate indexing and checking
+                    const std::vector<char>&               cash_trx_block_header,
+                    const std::vector<capi_checksum256>&   cash_trx_block_id_merkle_path,
+                    const uint32_t&                        anchor_block_num,
+                    const transaction_id_type&             orig_trx_id );          // redundant, facilitate indexing and checking
 ```
- - **cash_trx_block_num** cash transaction block number.
+ - **from_chain** peer chain name.
+ - **cash_trx_id** cash transaction id.
  - **cash_trx_packed_trx_receipt** cash transaction packed transaction receipt.
  - **cash_trx_merkle_path** cash transaction's merkle path to transaction merkleroot in block header.
- - **cash_trx_id** cash transaction id.
+ - **cash_trx_block_num** cash transaction block number.
+ - **cash_trx_block_header** cash transaction's block header.
+ - **cash_trx_block_id_merkle_path** cash transaction's block id merkle path to one active incremental_merkle node of the anchore block.
+ - **anchor_block_num** anchor block in table `chaindb` of ibc.chain contract
+ - **to** to account, who receive token transfered from the peer chain.
  - **orig_trx_id** original transaction id of this cash transaction.
-
+ - can be called with any account's auth
+ 
 #### rollback
 ```
-  void rollback( const transaction_id_type trx_id, name relay );
+  void rollback( name peerchain_name, const transaction_id_type trx_id ); 
 ```
  - called by ibc_plugin when there are original transactions need to be rolled back.
+ - **peerchain_name** peer chain name.
  - **trx_id**  transaction id, which need to be rollback (refund).
- - **relay** relay account.
- 
+ - can be called with any account's auth
  
 #### rmunablerb
 ```
-  void rmunablerb( const transaction_id_type trx_id, name relay );
+  void rmunablerb( name peerchain_name, const transaction_id_type trx_id ); 
 ```
  - called by ibc_plugin when there are unrollbackable original transactions
+ - **peerchain_name** peer chain name.
  - **trx_id**  transaction id, which need to be remove.
- - **relay** relay account.
-
+ - can be called with any account's auth
 
 Contract Design
 ---------------
@@ -467,4 +507,3 @@ When the **cashconfirm** corresponding to ibctx2 executes, the record of ibctx2 
 At this point, a value `last_confirmed_orig_trx_block_time_slot of _global_mutable` is recorded in the ibc.token contract.
 Based on this value, we can judge that ibctrx1 (Actually, all ibc transactions records whose time slot is less than 
 ibctrx2's time slot are must cross-chain failed) must have failed across the chain, so we need to rollback ibctrx1.
-
