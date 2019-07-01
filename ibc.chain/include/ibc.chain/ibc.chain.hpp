@@ -179,6 +179,7 @@ namespace eosio {
       void              assert_producer_signature( const digest_type& digest,
                                                    const capi_signature& signature,
                                                    const capi_public_key& pub_key ) const;
+      capi_public_key   get_public_key_form_signature( digest_type digest, signature_type sig ) const;
 
       bool only_one_eosio_bp();
    };

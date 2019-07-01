@@ -611,28 +611,30 @@ namespace eosio {
 
          for ( auto commit : commits ){
             eosio_assert( commit.view == first_view, "assert commit.view == first_view failed");
-            eosio_assert( first_num <= commit.block_num && commit.block_num <= last_num, "invalid commit.block_num");
-            eosio_assert( is_equal_capi_checksum256(commit.chain_id, _gstate.chain_id), "invalid chain_id");
+            uint32_t block_num = commit.block_num();
+            eosio_assert( first_num <= block_num && block_num <= last_num, "invalid commit block_num");
 
-            auto bhs = _chaindb.get( commit.block_num );
-            eosio_assert( is_equal_capi_checksum256(commit.block_id, bhs.block_id), "invalid block_id");
+            auto bhs = _chaindb.get( block_num );
+            eosio_assert( is_equal_capi_checksum256(commit.block_id(), bhs.block_id), "invalid block_id");
 
-            auto producer = get_producer_by_public_key(bhs.active_schedule_id, commit.pub_key);
+            auto pub_key = get_public_key_form_signature( commit.digest(_gstate.chain_id), commit.sender_signature );
+            auto producer = get_producer_by_public_key(bhs.active_schedule_id, pub_key);
             if( producer == name()) continue;
-            assert_producer_signature( commit.digest(), commit.producer_signature, commit.pub_key );
+
             producers.insert( producer );
          }
       } else if ( proof_type == "checkpoint"_n ) {
          for (auto checkpoint : checkpoints) {
-            eosio_assert(first_num <= checkpoint.block_num && checkpoint.block_num <= last_num, "invalid checkpoint.block_num");
-            eosio_assert(is_equal_capi_checksum256(checkpoint.chain_id, _gstate.chain_id), "invalid chain_id");
+            uint32_t block_num = checkpoint.block_num();
+            eosio_assert(first_num <= block_num && block_num <= last_num, "invalid checkpoint block_num");
 
-            auto bhs = _chaindb.get(checkpoint.block_num);
-            eosio_assert(is_equal_capi_checksum256(checkpoint.block_id, bhs.block_id), "invalid block_id");
+            auto bhs = _chaindb.get(block_num);
+            eosio_assert(is_equal_capi_checksum256(checkpoint.block_id(), bhs.block_id), "invalid block_id");
 
-            auto producer = get_producer_by_public_key(bhs.active_schedule_id, checkpoint.pub_key);
+            auto pub_key = get_public_key_form_signature( checkpoint.digest(_gstate.chain_id), checkpoint.sender_signature );
+            auto producer = get_producer_by_public_key(bhs.active_schedule_id, pub_key);
             if( producer == name()) continue;
-            assert_producer_signature(checkpoint.digest(), checkpoint.producer_signature, checkpoint.pub_key);
+
             producers.insert(producer);
          }
       }
@@ -772,6 +774,14 @@ namespace eosio {
       eosio_assert( it != _prodsches.end(), "internal error: block_header_state::sig_digest" );
       auto header_bmroot = get_checksum256( std::make_pair( hs.header.digest(), hs.blockroot_merkle.get_root() ));
       return get_checksum256( std::make_pair( header_bmroot, it->schedule_hash ));
+   }
+
+   capi_public_key chain::get_public_key_form_signature( digest_type digest, signature_type sig ) const {
+      capi_public_key pub_key;
+      size_t pubkey_size = recover_key( reinterpret_cast<const capi_checksum256*>(digest.hash),
+                                        reinterpret_cast<const char*>(sig.data), 66, pub_key.data, 34 );
+      eosio_assert( pubkey_size == 34, "pubkey_size != 34");
+      return pub_key;
    }
 
    capi_public_key chain::get_public_key_by_producer( uint64_t id, const name& producer ) const {
