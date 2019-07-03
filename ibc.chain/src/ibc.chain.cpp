@@ -611,6 +611,8 @@ namespace eosio {
 
          for ( auto commit : commits ){
             eosio_assert( commit.view == first_view, "assert commit.view == first_view failed");
+            eosio_assert( commit.common.type == 1, "not commit message");
+
             uint32_t block_num = commit.block_num();
             eosio_assert( first_num <= block_num && block_num <= last_num, "invalid commit block_num");
 
@@ -625,6 +627,8 @@ namespace eosio {
          }
       } else if ( proof_type == "checkpoint"_n ) {
          for (auto checkpoint : checkpoints) {
+            eosio_assert( commit.common.type == 2, "not checkpoint message");
+
             uint32_t block_num = checkpoint.block_num();
             eosio_assert(first_num <= block_num && block_num <= last_num, "invalid checkpoint block_num");
 
