@@ -590,7 +590,7 @@ namespace eosio {
          eosio_assert( commits.size() >= 15 || checkpoints.size() >= 15, "size of proof must not less then 15");
       }
 
-      eosio_assert( commits.size() <= 30 && checkpoints.size() <= 30, "size of proof too large");
+      eosio_assert( commits.size() <= 40 && checkpoints.size() <= 40, "size of proof too large");
 
       uint32_t first_num = headers.front().block_num();
       uint32_t last_num = headers.back().block_num();
