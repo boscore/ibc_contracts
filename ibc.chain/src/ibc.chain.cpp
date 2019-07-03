@@ -627,7 +627,7 @@ namespace eosio {
          }
       } else if ( proof_type == "checkpoint"_n ) {
          for (auto checkpoint : checkpoints) {
-            eosio_assert( commit.common.type == 2, "not checkpoint message");
+            eosio_assert( checkpoint.common.type == 2, "not checkpoint message");
 
             uint32_t block_num = checkpoint.block_num();
             eosio_assert(first_num <= block_num && block_num <= last_num, "invalid checkpoint block_num");
