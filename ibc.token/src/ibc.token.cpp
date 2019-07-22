@@ -70,6 +70,9 @@ namespace eosio {
          r.active                         = active;
       });
 
+      auto itr_m = _peerchainm.find( peerchain_name.value );
+      if ( itr_m != _peerchainm.end() ){ _peerchainm.erase( itr_m );}
+
       _peerchainm.emplace( _self, [&]( auto& r ){
          r.peerchain_name           = peerchain_name;
          r.cash_seq_num             = 0;
