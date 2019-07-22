@@ -20,7 +20,7 @@ namespace eosio {
    }
 
    chain::~chain() {
-      _global.set( _gstate, _self );
+      // _global.set( _gstate, _self );
    }
 
    void chain::setlibdepth( uint32_t lib_depth ){
@@ -507,6 +507,8 @@ namespace eosio {
       while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
       while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
       while ( _sections.begin() != _sections.end() ){ _sections.erase(_sections.begin()); }
+      while ( _relays.begin() != _relays.end() ){ _relays.erase(_relays.begin()); }
+      _global.remove();
    }
 
 // ---- class: section_type ----

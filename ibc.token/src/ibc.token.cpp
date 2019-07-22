@@ -28,8 +28,8 @@ namespace eosio {
    }
 
    token::~token(){
-      _global_state.set( _gstate, _self );
-      _global_mutable.set( _gmutable, _self );
+      // _global_state.set( _gstate, _self );
+      // _global_mutable.set( _gmutable, _self );
    }
    
    void token::setglobal( name       ibc_chain_contract,
@@ -936,25 +936,14 @@ namespace eosio {
 
    void token::forceinit( ) {
       require_auth( _self );
+      while ( _origtrxs.begin() != _origtrxs.end()  ){ _origtrxs.erase(_origtrxs.begin()); }
+      while ( _cashtrxs.begin() != _cashtrxs.end()  ){ _cashtrxs.erase(_cashtrxs.begin()); }
+      while ( _rmdunrbs.begin() != _rmdunrbs.end()  ){ _rmdunrbs.erase(_rmdunrbs.begin()); }
+      while ( _accepts.begin()  != _accepts.end()   ){ _accepts.erase(_accepts.begin());   }
+      while ( _stats.begin()    != _stats.end()     ){ _stats.erase(_stats.begin());       }
 
-      uint32_t count = 0, max_delete_per_time = 200;
-      while ( _origtrxs.begin() != _origtrxs.end() && count++ < max_delete_per_time ){
-         _origtrxs.erase(_origtrxs.begin());
-      }
-      while ( _cashtrxs.begin() != _cashtrxs.end() && count++ < max_delete_per_time ){
-         _cashtrxs.erase(_cashtrxs.begin());
-      }
-      while ( _rmdunrbs.begin() != _rmdunrbs.end() && count++ < max_delete_per_time ){
-         _rmdunrbs.erase(_rmdunrbs.begin());
-      }
-
-      _gmutable = global_mutable();
-
-      if( _origtrxs.begin() == _origtrxs.end() && _cashtrxs.begin() == _cashtrxs.end() && _rmdunrbs.begin() == _rmdunrbs.end() ){
-         print( "force initialization complete" );
-      } else {
-         print( "force initialization not complete" );
-      }
+      _global_mutable.remove();
+      _global_state.remove();
    }
 
    void token::sub_balance( name owner, asset value ) {
