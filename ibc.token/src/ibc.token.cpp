@@ -86,7 +86,7 @@ namespace eosio {
    void token::setchainbool( name peerchain_name, string which, bool value ){
       require_auth( _self );
 
-      auto& chain = _peerchains.get( peerchain_name.value );
+      auto& chain = _peerchains.get( peerchain_name.value, "peerchain not registered");
       if ( which == "active" ){
          _peerchains.modify( chain, same_payer, [&]( auto& r ) { r.active = value; });
          return;
@@ -458,7 +458,7 @@ namespace eosio {
 
       auto info = get_memo_info( memo );
       eosio_assert( info.receiver != name(),"receiver not provide");
-      auto pch = _peerchains.get( info.peerchain.value );
+      auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
 
       // check chain active
       eosio_assert( pch.active, "peer chain is not active");
@@ -557,7 +557,7 @@ namespace eosio {
       if (  to == _self && memo.find("local") != 0 ) {
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
-         auto pch = _peerchains.get( info.peerchain.value );
+         auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
          eosio_assert( pch.active, "peer chain is not active");
 
          withdraw( from, info.peerchain, info.receiver, quantity, info.notes );
@@ -566,7 +566,7 @@ namespace eosio {
 
       eosio_assert( is_account( to ), "to account does not exist");
       auto sym = quantity.symbol.code();
-      const auto& st = _stats.get( sym.raw() );
+      const auto& st = _stats.get( sym.raw(), "symbol(token) not registered");
 
       require_recipient( from );
       require_recipient( to );
@@ -721,7 +721,7 @@ namespace eosio {
       action actn = trxn.actions.front();
       transfer_action_type args = unpack<transfer_action_type>( actn.data );
 
-      auto pch = _peerchains.get( from_chain.value );
+      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
       eosio_assert( args.to == pch.peerchain_ibc_token_contract, "transfer to account not correct" );
       eosio_assert( args.quantity == quantity, "quantity not equal to quantity within packed transaction" );
       memo_info_type memo_info = get_memo_info( args.memo );
@@ -871,14 +871,14 @@ namespace eosio {
       eosio_assert( std::memcmp(orig_trx_id.hash, src_pkd_trx.id().hash, 32) == 0, "orig_trx_id mismatch" );
 
       // check cash_seq_num
-      auto& pchm = _peerchainm.get( from_chain.value );
+      auto& pchm = _peerchainm.get( from_chain.value, "from_chain not registered");
       eosio_assert( args.seq_num == pchm.cash_seq_num + 1, "seq_num derived from cash_trx_packed_trx_receipt error");
 
       // validate merkle path
       verify_merkle_path( cash_trx_merkle_path, trx_receipt.digest());
 
       // --- validate with lwc ---
-      auto pch = _peerchains.get( from_chain.value );
+      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
       eosio_assert( cash_trx_block_num <= anchor_block_num, "cash_trx_block_num <= anchor_block_num assert failed");
       if ( cash_trx_block_num < anchor_block_num ){
          block_header cash_trx_block_header = unpack<block_header>( cash_trx_block_header_data );
@@ -968,7 +968,7 @@ namespace eosio {
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
       eosio_assert( it != idx.end(), "trx_id not exist");
 
-      auto pchm = _peerchainm.get( peerchain_name.value );
+      auto pchm = _peerchainm.get( peerchain_name.value, "peerchain not found");
       eosio_assert( it->block_time_slot + min_distance < pchm.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
       _origtrxs.erase( _origtrxs.find(it->id) );
@@ -988,7 +988,7 @@ namespace eosio {
 
       for ( const auto& trx_id : trxs ){
          auto idx = _origtrxs.get_index<"trxid"_n>();
-         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash) );
+         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash), "trx_id not found");
          transfer_action_info action_info = record.action;
 
          if ( action_info.contract != _self ){  // rollback ibc transfer
@@ -1030,7 +1030,7 @@ namespace eosio {
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       for ( const auto& trx_id : trxs ){
          auto idx = _origtrxs.get_index<"trxid"_n>();
-         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash) );
+         const auto& record = idx.get( fixed_bytes<32>(trx_id.hash), "trx_id not found");
          _origtrxs.erase( record );
       }
    }
@@ -1171,7 +1171,7 @@ namespace eosio {
       transaction_id_type trx_id = get_trx_id();
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       
-      auto& pchm = _peerchainm.get( peerchain_name.value );
+      auto& pchm = _peerchainm.get( peerchain_name.value, "peerchain not found");
       _origtrxs.emplace( _self, [&]( auto& r ){
          r.id = pchm.origtrxs_tb_next_id;
          r.block_time_slot = get_block_time_slot();
