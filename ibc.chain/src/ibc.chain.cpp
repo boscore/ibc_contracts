@@ -31,7 +31,7 @@ namespace eosio {
       require_auth( _self );
       eosio_assert( chain_name != ""_n, "chain_name can not be empty");
       eosio_assert( ! is_equal_capi_checksum256(chain_id, chain_id_type()), "chain_id can not be empty");
-      eosio_assert( consensus_algo == "pipeline"_n || consensus_algo == "batch"_n, "consensus_algo must be pipeline or pbft" );
+      eosio_assert( consensus_algo == "pipeline"_n || consensus_algo == "batch"_n, "consensus_algo must be pipeline or batch" );
       _gstate.chain_name      = chain_name;
       _gstate.chain_id        = chain_id;
       _gstate.consensus_algo  = consensus_algo;
