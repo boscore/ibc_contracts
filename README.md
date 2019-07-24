@@ -36,3 +36,6 @@ please checkout the corresponding branch where the version 1 is located. As show
 | ibc_plugin_eos |  version 2    | ibc_v1.x.x_branch  |
 | ibc_plugin_bos |  version 2    | ibc_v1.x.x_branch  |
 
+
+### IBC test localhost environment
+[ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment.
