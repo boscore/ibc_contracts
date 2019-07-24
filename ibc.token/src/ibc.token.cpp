@@ -50,6 +50,7 @@ namespace eosio {
       eosio_assert( peerchain_info.size() < 256, "peerchain_info has more than 256 bytes");
       eosio_assert( peerchain_ibc_token_contract != name(), "peerchain_ibc_token_contract can not be empty");
       eosio_assert( is_account( thischain_ibc_chain_contract ), "thischain_ibc_chain_contract account does not exist");
+      eosio_assert( is_account( thischain_free_account ), "thischain_free_account does not exist");
 
       eosio_assert( 1 <= max_original_trxs_per_block && max_original_trxs_per_block <= 10 ,"max_original_trxs_per_block must in range [1,10]");
       eosio_assert( 500 <= max_origtrxs_table_records && max_origtrxs_table_records <= 2000 ,"max_origtrxs_table_records must in range [500,2000]");
