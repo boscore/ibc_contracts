@@ -58,6 +58,9 @@ namespace eosio {
       void setglobal( name this_chain, bool active );
 
       [[eosio::action]]
+      void onceinit( name chain );
+
+      [[eosio::action]]
       void regpeerchain( name           peerchain_name,
                          string         peerchain_info,
                          name           peerchain_ibc_token_contract,

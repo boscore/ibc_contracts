@@ -35,6 +35,80 @@ namespace eosio {
       _gstate.active       = active;
    }
 
+   void token::onceinit(  name chain ){
+      require_auth( _self );
+
+      if ( chain == "eosio"_n ){
+
+         auto _chainassets = chainassets_table( _self, "bos"_n.value );
+         _chainassets.emplace( _self, [&]( auto& chain ){ chain.balance = asset{ 58932913, symbol("EOS",4)}; });
+         _chainassets.emplace( _self, [&]( auto& chain ){ chain.balance = asset{ 341479999, symbol("TPT",4)}; });
+
+         const auto& acpt1 = get_currency_accept( "eosio.token"_n );
+         _accepts.modify( acpt1, same_payer, [&]( auto& r ) {
+            r.accept                = asset{ 59674591, symbol("EOS",4) };
+            r.total_transfer        = asset{ 77973643, symbol("EOS",4) };
+            r.total_transfer_times  = 4318;
+            r.total_cash            = asset{ 18299052, symbol("EOS",4) };
+            r.total_cash_times      = 1519;
+         });
+
+         const auto& acpt2 = get_currency_accept( "eosiotptoken"_n );
+         _accepts.modify( acpt2, same_payer, [&]( auto& r ) {
+            r.accept                = asset{ 344479999, symbol("TPT",4) };
+            r.total_transfer        = asset{ 346480000, symbol("TPT",4) };
+            r.total_transfer_times  = 31;
+            r.total_cash            = asset{ 2000001, symbol("TPT",4) };
+            r.total_cash_times      = 5;
+         });
+
+         const auto& st1 = get_currency_stats( symbol_code("BOS"));
+         _stats.modify( st1, same_payer, [&]( auto& r ) {
+            r.supply                = asset{ 1226736761, symbol("BOS",4) };
+            r.total_issue           = asset{ 2358746000, symbol("BOS",4) };
+            r.total_issue_times     = 6508;
+            r.total_withdraw        = asset{ 1132009239, symbol("BOS",4) };
+            r.total_withdraw_times  = 2614;
+         });
+
+      } else if ( chain == "boscore"_n ){
+
+         auto _chainassets = chainassets_table( _self, "eos"_n.value );
+         _chainassets.emplace( _self, [&]( auto& chain ){ chain.balance = asset{ 1226736761, symbol("BOS",4)}; });
+
+
+         const auto& acpt1 = get_currency_accept( "eosio.token"_n );
+         _accepts.modify( acpt1, same_payer, [&]( auto& r ) {
+            r.accept                = asset{ 1228988002, symbol("BOS",4) };
+            r.total_transfer        = asset{ 2358859241, symbol("BOS",4) };
+            r.total_transfer_times  = 6506;
+            r.total_cash            = asset{ 1129871239, symbol("BOS",4) };
+            r.total_cash_times      = 2606;
+         });
+
+         const auto& st1 = get_currency_stats( symbol_code("EOS"));
+         _stats.modify( st1, same_payer, [&]( auto& r ) {
+            r.supply                = asset{ 58932913, symbol("EOS",4) };
+            r.total_issue           = asset{ 77947965, symbol("EOS",4) };
+            r.total_issue_times     = 4300;
+            r.total_withdraw        = asset{ 19015052, symbol("EOS",4) };
+            r.total_withdraw_times  = 1519;
+         });
+
+         const auto& st2 = get_currency_stats( symbol_code("TPT") );
+         _stats.modify( st2, same_payer, [&]( auto& r ) {
+            r.supply                = asset{ 341479999, symbol("TPT",4) };
+            r.total_issue           = asset{ 346480000, symbol("TPT",4) };
+            r.total_issue_times     = 31;
+            r.total_withdraw        = asset{ 5000001, symbol("TPT",4) };
+            r.total_withdraw_times  = 5;
+         });
+
+      } else {
+         eosio_assert(false,"chain name error");
+      }
+   }
+
    void token::regpeerchain( name           peerchain_name,
                              string         peerchain_info,
                              name           peerchain_ibc_token_contract,
@@ -1281,7 +1355,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close))
+            (lockall)(unlockall)(forceinit)(open)(close)(onceinit))
          }
          return;
       }
