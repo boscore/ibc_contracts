@@ -54,10 +54,10 @@ Actions called by administrators
  - **thischain_ibc_chain_contract** the corresponding ibc.chain contract account of the peer chain
  - **thischain_free_account**, a account name, used by IBC monitor system, 
    transactions which transfer token from or to this account have no charge
- - **max_origtrxs_table_records** maximum `origtrxs` table records, this variable not used currently, set 0 is ok.
  - **max_original_trxs_per_block** maximum original transactions per block, the recommended value is 5, 
     the recommended range is [1-10]. If set greater than 10, 
-    the IBC system may not be able to handle such large throughput of IBC transactions.
+    the IBC system may not be able to handle such large throughput of IBC transactions.   
+ - **max_origtrxs_table_records** maximum `origtrxs` table records, this variable not used currently, set 0 is ok.
  - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
  - **active** set the initial active state (_peerchains.active).
     Only when _peerchains.active is true can the original IBC transaction to this peer chain be successfully executed.

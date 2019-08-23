@@ -38,4 +38,17 @@ please checkout the corresponding branch where the version 1 is located. As show
 
 
 ### IBC test localhost environment
-[ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment.
+[ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment, 
+you can find all the details related to IBC system deployment, contracts initialization, 
+testing inter-blockchain token transfers in the bash scripts.
+
+### Relevant documents
+ - [User_Guide](./docs/User_Guide.md) 
+   Explains how blockchain users use IBC system for inter-blockchain token transfer by command lines.
+ - [Token_Registration_and_Management](./docs/Token_Registration_and_Management.md) 
+   Explains how to register a `token` in the IBC contracts to circulate on the two blockchains.
+ - [Deployment_and_Test](./docs/Deployment_and_Test.md) Explains how to deploy and test the IBC system.
+ - [Troubleshooting](./docs/Troubleshooting.md) Explains how to troubleshooting when IBC system encounters problems.
+ - [EOSIO_IBC_Priciple_and_Design](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design.md)
+ - [EOSIO_IBC_Priciple_and_Design 中文版](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design_zh.md)
+ 
