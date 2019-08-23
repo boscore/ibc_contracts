@@ -76,7 +76,7 @@ Initialization of ibc.token contracts is somewhat complicated and requires great
 More importantly, there may be IBC transactions in the intermediate state.
 
 #### What is a intermediate state IBC transaction?
-For detailed principles, please refer to [ibc.token design document](./ibc.token/README.md#contract-design).
+For detailed principles, please refer to [ibc.token design document](../ibc.token/README.md#contract-design).
 When a IBC transaction only takes the first step or the first two steps, 
 we say that the IBC transaction is in the intermediate state.
 
