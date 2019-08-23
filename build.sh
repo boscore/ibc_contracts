@@ -9,7 +9,7 @@ print_usage(){
 }
 
 eosio_cdt_version=1.5
-bos_cdt_version=2.0.1
+bos_cdt_version=3.0.1
 
 if [ "$1" == "bos.cdt" ];then
     cdt_version=${bos_cdt_version}
