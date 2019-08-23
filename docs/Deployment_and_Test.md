@@ -126,7 +126,7 @@ peer chain as the genesis block header of ibc.chain contract, then synchronize a
 
 
 ### Register Token
-Please refer to detailed content [Token_Registration_and_Management](../../Documentation/IBC/Token_Registration_and_Management.md)
+Please refer to detailed content [Token_Registration_and_Management](./Token_Registration_and_Management.md)
 
 - register `EOS Token` of EOS mainnet in `ibc.token contract on both EOS and BOS mainnet`   
 ```bash
