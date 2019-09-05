@@ -87,50 +87,56 @@ void setchainbool( name peerchain_name, string which, bool value );
 #### regacpttoken
 ``` 
   void regacpttoken( name        original_contract,
+                     symbol      orig_token_symbol,
+                     symbol      peg_token_symbol,
                      asset       max_accept,
-                     name        administrator,
                      asset       min_once_transfer,
                      asset       max_once_transfer,
                      asset       max_daily_transfer,
                      uint32_t    max_tfs_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
                      string      organization,
                      string      website,
+                     name        administrator,
                      name        service_fee_mode,
                      asset       service_fee_fixed,
                      double      service_fee_ratio,
                      asset       failed_fee,
-                     bool        active,
-                     symbol      peerchain_sym );
+                     bool        active );
 ```
 This action is used to register acceptable token.
  - **original_contract** account name of the token contract to be registered.
+ - **orig_token_symbol** orignal token's symbol.
+ - **peg_token_symbol** the peg token symbol on the peer chain's ibc.token contract, can be same with the original token symbol or not.
  - **max_accept** maximum amount of receivable assets.
- - **administrator** this token's administrator, who can set some parameters related to this token.
  - **min_once_transfer** minimum amount of single transfer
  - **max_once_transfer** maximum amount of single transfer
  - **max_daily_transfer**  maximum amount of daily transfer
  - **max_tfs_per_minute** maximum number of transfers per minute, appropriate value range is [10,150];
  - **organization** organization name
  - **website** official website address
+ - **administrator** this token's administrator, who can set some parameters related to this token.
  - **service_fee_mode** charging mode, must be "fixed" or "ratio"
  - **service_fee_fixed** if service_fee_mode == fixed, use this value to calculate the successful withdrawal fee.
  - **service_fee_ratio** if service_fee_mode == ratio, use this value to calculate the successful withdrawal fee.
  - **failed_fee** use this value to calculate fee for the filed original transaction.
  - **active** set the initial active state of this token, 
     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
- - **peerchain_sym** the peg token symbol on the peer chain's ibc.token contract, can be same with the original token symbol or not.
  - require auth of _self
 
 Examples:  
 Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
 and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
 ``` 
+contract_token=ibc2token555
 run on EOS mainnet to register token EOS of eosio.token contract:
-$ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 EOS","eostokenadmi","0.1000 EOS","1000.0000 EOS",
-        "100000.0000 EOS",100,"block.one","eos.io","fixed","0.0100 EOS",0,"0.0050 EOS",true,"4,EOSPG"]' -p ibc2token555
+$ cleos push action ${contract_token} regacpttoken \
+    '["eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOS","10.0000 EOS","5000.0000 EOS",
+    "100000.0000 EOS",1000,"eos organization","https://eos.io","ibc2token555","fixed","0.1000 EOS",0.01,"0.1000 EOS",true]' -p ${contract_token}
+    
 run on BOS mainnet to register token BOS of eosio.token contract:
-$ cleos push action ibc2token555 regacpttoken '["eosio.token","5000000.0000 BOS","bostokenadmi","0.1000 BOS","1000.0000 BOS",
-        "100000.0000 BOS",100,"boscore","boscore.io","fixed","0.0100 BOS",0,"0.0050 BOS",true,"4,BOSPG"]' -p ibc2token555
+$ cleos push action ${contract_token} regacpttoken \
+    '["eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOS","10.0000 BOS","5000.0000 BOS",
+    "100000.0000 BOS",1000,"bos organization","https://boscore.io","ibc2token555","fixed","0.1000 BOS",0.01,"0.1000 BOS",true]' -p ${contract_token}
 ```
 
 #### setacptasset
@@ -191,27 +197,31 @@ Modify fee related members in currency_accept struct.
  
 #### regpegtoken
 ```
-  void regpegtoken( asset       max_supply,
+  void regpegtoken( name        peerchain_name,
+                    name        peerchain_contract,
+                    symbol      orig_token_symbol,
+                    symbol      peg_token_symbol,
+                    asset       max_supply,
                     asset       min_once_withdraw,
                     asset       max_once_withdraw,
                     asset       max_daily_withdraw,
-                    uint32_t    max_wds_per_minute, // 0 means the default value defined by default_max_trx_per_minute_per_token
+                    uint32_t    max_wds_per_minute,
                     name        administrator,
-                    name        peerchain_contract,
-                    symbol      peerchain_sym,
                     asset       failed_fee,
-                    bool        active ); // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
+                    bool        active );
 
 ```
 This action is used to register peg token.
+ - **peerchain_name** the name of the chain where the original token was located.
+ - **peerchain_contract** the peg token's original token contract name on it's original chain.
+ - **orig_token_symbol** original token symbol.
+ - **peg_token_symbol** the peg token's original token symbol on it's original chain
  - **max_supply** maximum supply
  - **min_once_withdraw** minimum amount of single withdraw
  - **max_once_withdraw** maximum amount of single withdraw
  - **max_daily_withdraw** maximum amount of daily withdraw
  - **max_wds_per_minute** maximum number of withdraws per minute, appropriate value range is [10,150];
  - **administrator** this token's administrator, who can set some parameters related to this token.
- - **peerchain_contract** the peg token's original token contract name on it's original chain.
- - **peerchain_sym** the peg token's original token symbol on it's original chain.
  - **failed_fee** use this value to calculate fee for the filed withdraw transaction.
  - **active** set the initial active state of this peg token, 
      when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
@@ -221,12 +231,16 @@ Examples:
 Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
 and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
 ``` 
+contract_token=ibc2token555
 run on EOS mainnet to register BOS's peg token, the peg token symbol is BOSPG:
-$ cleos push action ibc2token555 regpegtoken '["5000000.0000 BOSPG","0.1000 BOSPG","1000.0000 BOSPG",
-        "100000.0000 BOSPG",100,"bostokenadmi","eosio.token","4,BOS","0.0050 BOSPG",true]' -p ibc2token555
+$ cleos push action ${contract_token} regpegtoken \
+    '["bos","eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOSPG","10.0000 BOSPG","5000.0000 BOSPG",
+    "100000.0000 BOSPG",1000,"ibc2token555","0.1000 BOSPG",true]' -p ${contract_token}
+
 run on BOS mainnet to register EOS's peg token, the peg token symbol is EOSPG:
-$ cleos push action ibc2token555 regpegtoken '["5000000.0000 EOSPG","0.1000 EOSPG","1000.0000 EOSPG",
-        "100000.0000 EOSPG",100,"eostokenadmi","eosio.token","4,EOS","0.0050 EOSPG",true]' -p ibc2token555
+$ cleos push action ${contract_token} regpegtoken \
+    '["eos","eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOSPG","10.0000 EOSPG","5000.0000 EOSPG",
+    "100000.0000 EOSPG",1000,"ibc2token555","0.1000 EOSPG",true]' -p ${contract_token}
 ```
 
 #### setpegasset
