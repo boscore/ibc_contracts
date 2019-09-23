@@ -2,8 +2,7 @@
 
 ### How to Make IBC system Compatible with EOSIO 1.8 
 The upgrade process is very simple:
-1. check out [ibc_plugin_eos](https://github.com/boscore/ibc_plugin_eos)'s master branch 
-and build (pay attention to the [build instructions](https://github.com/boscore/ibc_plugin_eos#build)).
+1. check out [ibc_plugin_eos](https://github.com/boscore/ibc_plugin_eos)'s master branch and build.
 2. use this nodeos to run relay nodes of current EOS mainnet, 
    and use the same configuration file as relay nodes before, except for modifying the corresponding IP and port.
 3. stop relay nodes of previous version when EOS mainnet upgraded to v1.8.x.
