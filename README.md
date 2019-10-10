@@ -43,9 +43,6 @@ compatible combination two:
 | ibc_plugin_eos |  ibc_v1.x.x_branch |
 | ibc_plugin_bos |  ibc_v1.x.x_branch |
 
-:large_blue_circle: Please pay attention to the build process of the ibc_plugin_eos, which is described in detail in 
-[README.md](https://github.com/boscore/ibc_plugin_eos#build)
-
 
 ### IBC test localhost environment
 [ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment, 
