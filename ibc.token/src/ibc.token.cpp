@@ -326,6 +326,8 @@ namespace eosio {
          r.total_withdraw_times = 0;
          r.active             = active;
       });
+
+      update_stats2( max_supply.symbol.code() );
    }
 
    void token::setpegasset( symbol_code symcode, string which, asset quantity ) {
@@ -336,6 +338,7 @@ namespace eosio {
       if ( which == "max_supply" ){
          eosio_assert( quantity.amount >= st.supply.amount, "max_supply.amount should not less then supply.amount");
          _stats.modify( st, same_payer, [&]( auto& r ) { r.max_supply = quantity; });
+         update_stats2( quantity.symbol.code() );
          return;
       }
       if ( which == "min_once_withdraw" ){
@@ -655,6 +658,8 @@ namespace eosio {
       add_balance( _self, quantity, _self ); // not burn token here, burn at cash_confirm()
 
       origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity } );
+
+      update_stats2( quantity.symbol.code() );
    }
 
    void token::verify_merkle_path( const std::vector<digest_type>& merkle_path, digest_type check ) {
@@ -777,6 +782,8 @@ namespace eosio {
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
+
+         update_stats2( st.supply.symbol.code() );
       } else {  // withdraw accepted token to user
          const auto& acpt = get_currency_accept_by_peg_token_symbol( quantity.symbol.code() );
          eosio_assert( acpt.active, "not active");
@@ -957,6 +964,8 @@ namespace eosio {
             transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
+
+         update_stats2( st.supply.symbol.code() );
       }
 
       _origtrxs.erase( _origtrxs.find(it->id) );
@@ -1019,6 +1028,8 @@ namespace eosio {
                transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
                action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
             }
+
+            update_stats2( st.supply.symbol.code() );
          }
          _origtrxs.erase( record );
       }
@@ -1269,6 +1280,26 @@ namespace eosio {
          return false;
       }
       return true;
+   }
+
+   void token::update_stats2( symbol_code sym_code ){
+      const auto& st1 = get_currency_stats( sym_code );
+
+      stats2 _stats2( _self, sym_code.raw() );
+      auto itr = _stats2.find( sym_code.raw() );
+
+      if ( itr == _stats2.end() ){
+         _stats2.emplace( _self, [&]( auto& s ) {
+            s.supply        = st1.supply;
+            s.max_supply    = st1.max_supply;
+            s.issuer        = _self;
+         });
+      } else {
+         _stats2.modify( itr, same_payer, [&]( auto& s ) {
+            s.supply        = st1.supply;
+            s.max_supply    = st1.max_supply;
+         });
+      }
    }
 
 } /// namespace eosio

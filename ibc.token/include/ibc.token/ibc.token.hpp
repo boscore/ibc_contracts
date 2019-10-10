@@ -371,6 +371,18 @@ namespace eosio {
       };
       typedef eosio::multi_index< "accounts"_n, account > accounts;
 
+      // table stat is just used for command 'cleos get currency stats ...' compatibility
+      // code,scope (_self,sym_code)
+      struct [[eosio::table]] currency_stats2 {
+         asset    supply;
+         asset    max_supply;
+         name     issuer;
+
+         uint64_t primary_key()const { return supply.symbol.code().raw(); }
+      };
+      typedef eosio::multi_index< "stat"_n, currency_stats2 > stats2;
+
+      void update_stats2( symbol_code sym_code );
 
       // use to record accepted transfer and withdraw transactions
       // code,scope(_self,peerchain_name.value)
