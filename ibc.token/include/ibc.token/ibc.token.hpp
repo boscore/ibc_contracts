@@ -41,10 +41,11 @@ namespace eosio {
       name                                   to;
       asset                                  quantity;
       string                                 memo;
+      name                                   relay;
 
       EOSLIB_SERIALIZE( cash_action_type, (seq_num)(from_chain)(orig_trx_id)(orig_trx_packed_trx_receipt)
                         (orig_trx_merkle_path)(orig_trx_block_num)(orig_trx_block_header_data)
-                        (orig_trx_block_id_merkle_path)(anchor_block_num)(to)(quantity)(memo) )
+                        (orig_trx_block_id_merkle_path)(anchor_block_num)(to)(quantity)(memo)(relay) )
    };
 
    const static uint32_t default_max_trxs_per_minute_per_token = 100;
@@ -160,7 +161,8 @@ namespace eosio {
                  const uint32_t&                        anchor_block_num,
                  const name&                            to,                   // redundant, facilitate indexing and checking
                  const asset&                           quantity,             // redundant, facilitate indexing and checking
-                 const string&                          memo );
+                 const string&                          memo,
+                 const name&                            relay );
 
       // called by ibc plugin
       [[eosio::action]]
@@ -176,11 +178,11 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rollback( name peerchain_name, const transaction_id_type trx_id );   // check if any orignal transactions should be rollback, rollback them if have
+      void rollback( name peerchain_name, const transaction_id_type trx_id, name relay );   // check if any orignal transactions should be rollback, rollback them if have
 
       // called by ibc plugin repeatedly when there are unrollbackable original transactions
       [[eosio::action]]
-      void rmunablerb( name peerchain_name, const transaction_id_type trx_id );   // force to remove unrollbackable transaction
+      void rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay );   // force to remove unrollbackable transaction
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]

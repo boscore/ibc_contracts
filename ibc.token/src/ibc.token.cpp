@@ -702,7 +702,11 @@ namespace eosio {
                      const uint32_t&                        anchor_block_num,
                      const name&                            to,                  // redundant, facilitate indexing and checking
                      const asset&                           quantity,            // with the token symbol of the original trx it self. redundant, facilitate indexing and checking
-                     const string&                          memo ) {
+                     const string&                          memo,
+                     const name&                            relay ) {
+      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
+      chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
+
       // check global state
       eosio_assert( _gstate.active, "global not active" );
 
@@ -727,7 +731,7 @@ namespace eosio {
       action actn = trxn.actions.front();
       transfer_action_type args = unpack<transfer_action_type>( actn.data );
 
-      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
+      // check action parameters
       eosio_assert( args.to == pch.peerchain_ibc_token_contract, "transfer to account not correct" );
       eosio_assert( args.quantity == quantity, "quantity not equal to quantity within packed transaction" );
       memo_info_type memo_info = get_memo_info( args.memo );
@@ -911,7 +915,10 @@ namespace eosio {
       });
    }
 
-   void token::rollback( name peerchain_name, const transaction_id_type trx_id ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM consume from being maliciously occupied
+   void token::rollback( name peerchain_name, const transaction_id_type trx_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM consume from being maliciously occupied
+      auto pch = _peerchains.get( peerchain_name.value );
+      chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
+
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       auto idx = _origtrxs.get_index<"trxid"_n>();
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
@@ -922,8 +929,6 @@ namespace eosio {
       transfer_action_info action_info = it->action;
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
       print( memo.c_str() );
-
-      auto pch = _peerchains.get( peerchain_name.value );
 
       if ( action_info.contract != _self ){  // rollback ibc transfer
          const auto& acpt = get_currency_accept( action_info.contract );
@@ -972,7 +977,10 @@ namespace eosio {
    }
 
    static const uint32_t min_distance = 3600 * 24 * 2;   // one day
-   void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id ){
+   void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay ){
+      auto pch = _peerchains.get( peerchain_name.value );
+      chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
+
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       auto idx = _origtrxs.get_index<"trxid"_n>();
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );

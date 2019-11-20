@@ -53,7 +53,7 @@ namespace eosio {
                        _prodsches.begin() == _prodsches.end() &&
                        _sections.begin() == _sections.end() &&
                        _gmutable.last_anchor_block_num == 0, "the light client has already been initialized" );
-         require_relay_auth( relay );
+         require_relay_auth( _self, relay );
       }
 
       const signed_block_header& header = unpack<signed_block_header>( header_data );
@@ -109,7 +109,7 @@ namespace eosio {
    void chain::pushsection( const std::vector<char>&    headers_data,
                             const incremental_merkle&   blockroot_merkle,
                             const name&                 relay ) {
-      require_relay_auth( relay );
+      require_relay_auth( _self, relay );
 
       eosio_assert( _gstate.consensus_algo == "pipeline"_n, "consensus algorithm must be pipeline");
 
@@ -433,7 +433,7 @@ namespace eosio {
 
    static const uint32_t max_delete = 150; // max delete 150 records per time, in order to avoid exceed cpu limit
    void chain::rmfirstsctn( const name& relay ){
-      require_relay_auth( relay );
+      require_relay_auth( _self, relay );
 
       auto it = _sections.begin();
       auto next = ++it;
@@ -577,7 +577,7 @@ namespace eosio {
                              const std::vector<char>&    proof_data,
                              const name&                 proof_type,
                              const name&                 relay ) {
-      require_relay_auth( relay );
+      require_relay_auth( _self, relay );
 
       eosio_assert( _gstate.consensus_algo == "batch"_n, "consensus algorithm must be batch");
       eosio_assert( _chaindb.begin() != _chaindb.end(), "the light client has not been initialized yet");
@@ -885,12 +885,6 @@ namespace eosio {
       }
 
       eosio_assert(false,"unknown action");
-   }
-
-   void chain::require_relay_auth( const name& relay ){
-      if ( check_relay_auth ) {
-         require_auth( relay );
-      }
    }
 
 } /// namespace eosio

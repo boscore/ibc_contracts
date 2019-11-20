@@ -168,10 +168,14 @@ namespace eosio {
          eosio_assert( is_equal_capi_checksum256( bhs.header.transaction_mroot, transaction_mroot ), "provided transaction_mroot not correct");
       }
 
-      static bool is_relay( name ibc_contract_account, name check ) {
-         relays _relays( ibc_contract_account, ibc_contract_account.value );
-         auto it = _relays.find( check.value );
-         return it != _relays.end();
+      static void require_relay_auth( name ibc_contract_account, name relay ) {
+         if ( check_relay_auth ) {
+            relays _relays( ibc_contract_account, ibc_contract_account.value );
+            auto it = _relays.find( relay.value );
+            return it != _relays.end();
+            eosio_assert( it != _relays.end(), "this account is not registered as relay");
+            require_auth( relay );
+         }
       }
 
       // this action maybe needed when repairing the ibc system manually
@@ -205,8 +209,6 @@ namespace eosio {
       capi_public_key   get_public_key_form_signature( digest_type digest, signature_type sig ) const;
 
       bool only_one_eosio_bp();
-
-      void require_relay_auth( const name& relay );
    };
 
 } /// namespace eosio
