@@ -20,6 +20,8 @@ namespace eosio {
    const static uint32_t producer_repetitions = 12;   // don't modify
    const static uint32_t chaindb_max_history_length = 60;   // uint: minutes
 
+   const static bool     check_relay_auth = true;
+
    struct [[eosio::table("global"), eosio::contract("ibc.chain")]] global_state {
       name              chain_name;       // the original chain name, ibc_plugin uses this name to interact with the ibc.token contract
       chain_id_type     chain_id;
@@ -83,6 +85,14 @@ namespace eosio {
    };
    typedef eosio::multi_index< "sections"_n, section_type >  sections;
 
+   struct [[eosio::table("relays"), eosio::contract("ibc.chain")]] relay_account {
+      name    relay;
+
+      uint64_t primary_key()const { return relay.value; }
+
+      EOSLIB_SERIALIZE( relay_account, (relay) )
+   };
+   typedef eosio::multi_index< "relays"_n, relay_account > relays;
 
    class [[eosio::contract("ibc.chain")]] chain : public contract {
    private:
@@ -93,6 +103,7 @@ namespace eosio {
       chaindb                    _chaindb;
       prodsches                  _prodsches;
       sections                   _sections;
+      relays                     _relays;
 
    public:
       chain( name s, name code, datastream<const char*> ds );
@@ -106,23 +117,29 @@ namespace eosio {
       [[eosio::action]]
       void chaininit( const std::vector<char>&     header,
                       const producer_schedule&     active_schedule,
-                      const incremental_merkle&    blockroot_merkle );
+                      const incremental_merkle&    blockroot_merkle,
+                      const name&                  relay );
 
       // push a batch of blocks, called by ibc plugin, used under pipeline consensus algorithm
       [[eosio::action]]
       void pushsection( const std::vector<char>&    headers,
-                        const incremental_merkle&   blockroot_merkle );
+                        const incremental_merkle&   blockroot_merkle,
+                        const name&                 relay );
 
       // remove first section data, called by ibc plugin repeatedly, used under pipeline consensus algorithm
       [[eosio::action]]
-      void rmfirstsctn( );
+      void rmfirstsctn( const name& relay );
+
+      [[eosio::action]]
+      void relay( string action, name relay );
 
       // push a small batch of blocks and related commits, called by ibc plugin, used under batch consensus algorithm
       [[eosio::action]]
       void pushblkcmits( const std::vector<char>&    headers,
                          const incremental_merkle&   blockroot_merkle,
                          const std::vector<char>&    proof_data,
-                         const name&                 proof_type );
+                         const name&                 proof_type,
+                         const name&                 relay );
 
       /**
        * Very important function, used by other contracts to verifying transactions
@@ -149,6 +166,12 @@ namespace eosio {
          auto bhs = _chaindb.get( block_num );
          eosio_assert( bhs.is_anchor_block, (string("block ") + std::to_string(block_num) + " is not anchor block").c_str());
          eosio_assert( is_equal_capi_checksum256( bhs.header.transaction_mroot, transaction_mroot ), "provided transaction_mroot not correct");
+      }
+
+      static bool is_relay( name ibc_contract_account, name check ) {
+         relays _relays( ibc_contract_account, ibc_contract_account.value );
+         auto it = _relays.find( check.value );
+         return it != _relays.end();
       }
 
       // this action maybe needed when repairing the ibc system manually
@@ -182,6 +205,8 @@ namespace eosio {
       capi_public_key   get_public_key_form_signature( digest_type digest, signature_type sig ) const;
 
       bool only_one_eosio_bp();
+
+      void require_relay_auth( const name& relay );
    };
 
 } /// namespace eosio

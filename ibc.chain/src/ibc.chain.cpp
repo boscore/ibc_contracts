@@ -14,7 +14,8 @@ namespace eosio {
             _global_mutable(_self, _self.value),
             _chaindb(_self, _self.value),
             _prodsches(_self, _self.value),
-            _sections(_self, _self.value)
+            _sections(_self, _self.value),
+            _relays(_self, _self.value)
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _gmutable = _global_mutable.exists() ? _global_mutable.get() : global_mutable{};
@@ -40,7 +41,8 @@ namespace eosio {
    // init for both pipeline and batch light client
    void chain::chaininit( const std::vector<char>&      header_data,
                           const producer_schedule&      active_schedule,
-                          const incremental_merkle&     blockroot_merkle) {
+                          const incremental_merkle&     blockroot_merkle,
+                          const name&                   relay ) {
       if ( has_auth(_self) ){
          while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
          while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
@@ -51,6 +53,7 @@ namespace eosio {
                        _prodsches.begin() == _prodsches.end() &&
                        _sections.begin() == _sections.end() &&
                        _gmutable.last_anchor_block_num == 0, "the light client has already been initialized" );
+         require_relay_auth( relay );
       }
 
       const signed_block_header& header = unpack<signed_block_header>( header_data );
@@ -104,7 +107,10 @@ namespace eosio {
    // ------ section related functions ------ //
 
    void chain::pushsection( const std::vector<char>&    headers_data,
-                            const incremental_merkle&   blockroot_merkle ) {
+                            const incremental_merkle&   blockroot_merkle,
+                            const name&                 relay ) {
+      require_relay_auth( relay );
+
       eosio_assert( _gstate.consensus_algo == "pipeline"_n, "consensus algorithm must be pipeline");
 
       std::vector<signed_block_header> headers = unpack<std::vector<signed_block_header>>( headers_data );
@@ -426,7 +432,9 @@ namespace eosio {
    }
 
    static const uint32_t max_delete = 150; // max delete 150 records per time, in order to avoid exceed cpu limit
-   void chain::rmfirstsctn( ){
+   void chain::rmfirstsctn( const name& relay ){
+      require_relay_auth( relay );
+
       auto it = _sections.begin();
       auto next = ++it;
       eosio_assert( next != _sections.end(), "can not delete the last section");
@@ -567,7 +575,10 @@ namespace eosio {
    void chain::pushblkcmits( const std::vector<char>&    headers_data,
                              const incremental_merkle&   blockroot_merkle,
                              const std::vector<char>&    proof_data,
-                             const name&                 proof_type ) {
+                             const name&                 proof_type,
+                             const name&                 relay ) {
+      require_relay_auth( relay );
+
       eosio_assert( _gstate.consensus_algo == "batch"_n, "consensus algorithm must be batch");
       eosio_assert( _chaindb.begin() != _chaindb.end(), "the light client has not been initialized yet");
 
@@ -857,6 +868,31 @@ namespace eosio {
       return pds.size() == 1 && pds.front().producer_name == "eosio"_n;
    }
 
+   void chain::relay( string action, name relay ) {
+      require_auth( _self );
+      auto existing = _relays.find( relay.value );
+
+      if ( action == "add" ) {
+         eosio_assert( existing == _relays.end(), "relay already exist" );
+         _relays.emplace( _self, [&]( auto& r ){ r.relay = relay; } );
+         return;
+      }
+
+      if ( action == "remove" ) {
+         eosio_assert( existing != _relays.end(), "relay not exist" );
+         _relays.erase( existing );
+         return;
+      }
+
+      eosio_assert(false,"unknown action");
+   }
+
+   void chain::require_relay_auth( const name& relay ){
+      if ( check_relay_auth ) {
+         require_auth( relay );
+      }
+   }
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit)(relay) )
