@@ -172,7 +172,6 @@ namespace eosio {
          if ( check_relay_auth ) {
             relays _relays( ibc_contract_account, ibc_contract_account.value );
             auto it = _relays.find( relay.value );
-            return it != _relays.end();
             eosio_assert( it != _relays.end(), "this account is not registered as relay");
             require_auth( relay );
          }
@@ -181,6 +180,9 @@ namespace eosio {
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
       void forceinit( );
+
+      [[eosio::action]]
+      void reqrelayauth( );
 
    private:
       // pipeline pbft related

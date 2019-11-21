@@ -887,6 +887,14 @@ namespace eosio {
       eosio_assert(false,"unknown action");
    }
 
+   void chain::reqrelayauth( ){
+      if ( check_relay_auth ){
+         eosio_assert( false, "check_relay_auth == true" );
+      } else {
+         eosio_assert( false, "check_relay_auth == false" );
+      }
+   }
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit)(relay) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit)(relay)(reqrelayauth) )

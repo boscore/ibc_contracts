@@ -203,6 +203,9 @@ namespace eosio {
       void forceinit( name peerchain_name ); //force init
 
       [[eosio::action]]
+      void reqrelayauth( );
+
+      [[eosio::action]]
       void open( name owner, const symbol_code& symcode, name ram_payer );
 
       [[eosio::action]]
