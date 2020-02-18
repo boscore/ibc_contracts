@@ -43,6 +43,23 @@ Actions called by ibc_plugin
  - this function is called by ibc_plugin repeatedly as needed
  - can be called with any account's auth
 
+Relay management
+----------------
+#### check_relay_auth
+This parameter is hard coded. both ibc.chain and ibc.token contracts use this parameter to control whether to check the operation permission of a specific action. If it is set to `true`, function `require_relay_auth( name ibc_contract_account, name relay )`
+will check the corresponding relay permission, if set to false, it will not be checked.  
+
+Currently, the actions to check the relay permission include  
+ibc.chain : `chaininit`,`pushsection`,`rmfirstsctn`,`pushblkcmits`  
+ibc.token : `cash`,`rollback`,`rmunablerb`  
+
+#### void relay( string action, name relay )
+ - **action**, the string value must be 'add' to add a relay to the relay set or 'remove' to remove a relay, you can add multiple relays.
+ - **relay**, the relay account.
+
+#### void reqrelayauth( )
+This action is used to facilitate the administrator to check the value of `check_relay_auth`, because this parameter is hard coded in the code and cannot be viewed through the contract table.
+
 Resource requirement
 --------------------
 It's better to have not less than 5MB RAM for a light client of `pipeline` consensus blockchains,
