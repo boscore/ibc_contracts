@@ -54,7 +54,7 @@ ibc.chain : `chaininit`,`pushsection`,`rmfirstsctn`,`pushblkcmits`
 ibc.token : `cash`,`rollback`,`rmunablerb`  
 
 #### void relay( string action, name relay )
- - **action**, the string value must be 'add' to add a relay to the relay set or 'remove' to remove a relay, you can add multiple relays.
+ - **action**, the string value must be **`add`** to add a relay to the relay set or **`remove`** to remove a relay, you can add multiple relays.
  - **relay**, the relay account.
 
 #### void reqrelayauth( )
