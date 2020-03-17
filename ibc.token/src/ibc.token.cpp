@@ -120,6 +120,14 @@ namespace eosio {
       eosio_assert( peg_token_symbol.is_valid(), "peg_token_symbol invalid");
       eosio_assert( orig_token_symbol.precision() == peg_token_symbol.precision(), "precision mismatch");
 
+      /// When multiple chains make up a ibc hub system, to avoid unnecessary confusion,
+      /// all pegtoken must use the same symbol as its original token
+      /// and symbols should be unique in the whole multi-chain IBC system, so we no longer allow same symbol exist in the both
+      /// table 'stat' and 'accept'
+      eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
+      auto idx = _stats.get_index<"pegtokensym"_n>();
+      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end(), "token symbol conflict in table 'stats' and 'accepts'");
+
       eosio_assert( max_accept.is_valid(), "invalid max_accept");
       eosio_assert( max_accept.amount > 0, "max_accept must be positive");
       eosio_assert( max_accept.symbol           == orig_token_symbol &&
@@ -286,6 +294,11 @@ namespace eosio {
       eosio_assert( orig_token_symbol.is_valid(), "orig_token_symbol invalid");
       eosio_assert( peg_token_symbol.is_valid(), "peg_token_symbol invalid");
       eosio_assert( orig_token_symbol.precision() == peg_token_symbol.precision(), "precision mismatch");
+
+      /// @ref token::regacpttoken(...)
+      eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
+      auto idx = _accepts.get_index<"pegtokensym"_n>();
+      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end(), "token symbol conflict in table 'stats' and 'accepts'");
 
       eosio_assert( max_supply.is_valid(), "invalid max_supply");
       eosio_assert( max_supply.amount > 0, "max_supply must be positive");
@@ -558,14 +571,19 @@ namespace eosio {
 
       eosio_assert( memo.size() <= 512, "memo has more than 512 bytes" );
 
+      bool trigger_notify = false;
       if (  to == _self && memo.find("local") != 0 ) {
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
          auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
          eosio_assert( pch.active, "peer chain is not active");
 
-         withdraw( from, info.peerchain, info.receiver, quantity, info.notes );
-         return;
+         const auto& st = get_currency_stats( quantity.symbol.code() );
+         if ( info.peerchain == st.peerchain_name ){
+            withdraw( from, info.peerchain, info.receiver, quantity, info.notes );
+            return;
+         }
+         trigger_notify = true;
       }
 
       eosio_assert( is_account( to ), "to account does not exist");
@@ -583,6 +601,10 @@ namespace eosio {
 
       sub_balance( from, quantity );
       add_balance( to, quantity, payer );
+
+      if ( trigger_notify ){
+         transfer_notify( _self, from, to /** _self */, quantity, memo );
+      }
    }
 
    void token::withdraw( name from, name peerchain_name, name peerchain_receiver, asset quantity, string memo ) {
@@ -757,8 +779,23 @@ namespace eosio {
       }
 
       asset new_quantity;
-
-      if ( actn.account != pch.peerchain_ibc_token_contract ){   // issue peg token to user
+      /**
+       * 'ibc_transfer' means send a token from its original issued chain to its peg-token chain.
+       * 'ibc_withdraw' means send a token from its  peg-token chain to its original issued chain.
+       */
+      bool ibc_transfer = false;
+      
+      { 
+         auto idx = _stats.get_index<"origtokensym"_n>();
+         auto itr = idx.find( symcode.raw() );
+         if ( itr != idx.end() ){
+            ibc_transfer = true;
+            auto idx2 = _accepts.get_index<"pegtokensym"_n>();
+            eosio_assert( idx2.find(symcode.raw()) == idx2.end(), "token symbol conflict in table 'stats' and 'accepts'");
+         }
+      }
+      
+      if ( ibc_transfer ){   // issue peg token to user
          const auto& st = get_currency_stats_by_orig_token_symbol( sym.code() );
          eosio_assert( st.active, "not active");
          eosio_assert( st.peerchain_name == from_chain, "from_chain must equal to st.peerchain_name");
