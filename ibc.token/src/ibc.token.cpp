@@ -572,7 +572,7 @@ namespace eosio {
       eosio_assert( memo.size() <= 512, "memo has more than 512 bytes" );
 
       bool trigger_notify = false;
-      if (  to == _self && memo.find("local") != 0 ) {
+      if (  to == _self && memo.find("local") != 0 ) {   /// @tag 1: important 'to == _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
          auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
@@ -815,7 +815,7 @@ namespace eosio {
          });
 
          add_balance( _self, new_quantity, _self );
-         if( to != _self ) {
+         if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
             if ( memo_info.notes.size() > 256 ) memo_info.notes.resize( 256 );
             /* string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
                               + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-issue--> thischain "
@@ -865,7 +865,7 @@ namespace eosio {
             r.total_cash_times += 1;
          });
 
-         if( to != _self ) {
+         if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
             if ( memo_info.notes.size() > 70 ) memo_info.notes.resize( 70 );
             /* string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
                               + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain "
