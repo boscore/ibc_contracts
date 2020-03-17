@@ -29,6 +29,33 @@ namespace eosio {
       void setglobal(name this_chain, bool active);
 
    private:
+
+      struct [[eosio::table("globals")]] global_state {
+         global_state(){}
+
+         name              this_chain;
+         bool              active = true; // use as global locks
+
+         EOSLIB_SERIALIZE( global_state, (this_chain)(active))
+      };
+
+
+      // code,scope(_self,peerchain_name.value)
+      struct [[eosio::table]] hub_trx_info {
+         uint64_t                id; // auto-increment
+
+
+         uint64_t primary_key()const { return balance.symbol.code().raw(); }
+      };
+      typedef eosio::multi_index< "chainassets"_n, peer_chain_asset > chainassets_table;
+
+
+
+
+
+
+
+
       int a;
    };
 
