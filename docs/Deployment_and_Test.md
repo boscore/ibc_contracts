@@ -98,6 +98,10 @@ contract_token_pubkey='<public key of contract_token>' # public active key is ok
 $cleos_kylin set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
 $cleos_kylin set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
 
+# if check_relay_auth is set to true, relay account should be registered to allown ibc_plugin use it push transactions.
+relay_account=ibc3relay333
+$cleos_kylin push action ${contract_chain} relay  '["add",'${relay_account}']' -p ${contract_chain}
+
 $cleos_kylin push action ${contract_chain} setglobal '["bostest","<bos testnet chain_id>","batch"]' -p ${contract_chain}
 
 $cleos_kylin set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
@@ -114,6 +118,10 @@ contract_token_pubkey='<public key of contract_token>' # public active key is ok
 
 $cleos_bos set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
 $cleos_bos set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
+
+# if check_relay_auth is set to true, relay account should be registered to allown ibc_plugin use it push transactions.
+relay_account=ibc3relay333
+$cleos_bos push action ${contract_chain} relay  '["add",'${relay_account}']' -p ${contract_chain}
 
 $cleos_bos push action ${contract_chain} setglobal '["kylin","<Kylin testnet chain_id>","pipeline"]' -p ${contract_chain}
 
