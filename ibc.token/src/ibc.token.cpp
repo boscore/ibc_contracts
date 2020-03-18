@@ -125,7 +125,7 @@ namespace eosio {
       /// and symbols should be unique in the whole multi-chain IBC system, so we no longer allow same symbol exist in the both
       /// table 'stat' and 'accept'
       eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
-      auto idx = _stats.get_index<"pegtokensym"_n>();
+      auto idx = _stats.get_index<"origtokensym"_n>();
       eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end(), "token symbol conflict in table 'stats' and 'accepts'");
 
       eosio_assert( max_accept.is_valid(), "invalid max_accept");
@@ -787,11 +787,11 @@ namespace eosio {
       
       { 
          auto idx = _stats.get_index<"origtokensym"_n>();
-         auto itr = idx.find( symcode.raw() );
+         auto itr = idx.find( sym.code().raw() );
          if ( itr != idx.end() ){
             ibc_transfer = true;
             auto idx2 = _accepts.get_index<"pegtokensym"_n>();
-            eosio_assert( idx2.find(symcode.raw()) == idx2.end(), "token symbol conflict in table 'stats' and 'accepts'");
+            eosio_assert( idx2.find(sym.code().raw()) == idx2.end(), "token symbol conflict in table 'stats' and 'accepts'");
          }
       }
       
