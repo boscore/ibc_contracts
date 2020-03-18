@@ -1349,14 +1349,6 @@ namespace eosio {
       }
    }
 
-   void token::reqrelayauth( ){
-      if ( check_relay_auth ){
-         eosio_assert( false, "check_relay_auth == true" );
-      } else {
-         eosio_assert( false, "check_relay_auth == false" );
-      }
-   }
-
 } /// namespace eosio
 
 extern "C" {
@@ -1367,7 +1359,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)(reqrelayauth))
+            (lockall)(unlockall)(forceinit)(open)(close))
          }
          return;
       }
