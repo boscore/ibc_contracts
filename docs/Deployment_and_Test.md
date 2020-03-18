@@ -90,36 +90,44 @@ and check the IBC contracts' status on their respective chains, and print the lo
 ### Deploy and Init IBC Contracts
 - ibc.chain and ibc.token contracts on Kylin testnet  
 ```bash
-cleos1='cleos -u <Kylin testnet http endpoint>'
+cleos_kylin='cleos -u <Kylin testnet http endpoint>'
 contract_chain=ibc3chain333
 contract_token=ibc3token333
 contract_token_pubkey='<public key of contract_token>' # public active key is ok
 
-$cleos1 set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
-$cleos1 set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
+$cleos_kylin set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
+$cleos_kylin set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
 
-$cleos1 push action ${contract_chain} setglobal '["bostest","<bos testnet chain_id>","batch"]' -p ${contract_chain}
+# if check_relay_auth is set to true, relay account should be registered to allown ibc_plugin use it to push transactions.
+relay_account=ibc3relay333
+$cleos_kylin push action ${contract_chain} relay  '["add",'${relay_account}']' -p ${contract_chain}
 
-$cleos1 set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
-$cleos1 push action ${contract_token} setglobal '["kylin",true]' -p ${contract_token}
-$cleos1 push action ${contract_token} regpeerchain '["bostest","https://bos-test.bloks.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
+$cleos_kylin push action ${contract_chain} setglobal '["bostest","<bos testnet chain_id>","batch"]' -p ${contract_chain}
+
+$cleos_kylin set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
+$cleos_kylin push action ${contract_token} setglobal '["kylin",true]' -p ${contract_token}
+$cleos_kylin push action ${contract_token} regpeerchain '["bostest","https://bos-test.bloks.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
 ```
 
 - ibc.chain and ibc.token contracts on BOS testnet  
 ```bash
-cleos2='cleos -u <BOS testnet http endpoint>'
+cleos_bos='cleos -u <BOS testnet http endpoint>'
 contract_chain=ibc3chain333
 contract_token=ibc3token333
 contract_token_pubkey='<public key of contract_token>' # public active key is ok
 
-$cleos2 set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
-$cleos2 set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
+$cleos_bos set contract ${contract_chain} <contract_chain_folder> -x 1000 -p ${contract_chain}
+$cleos_bos set contract ${contract_token} <contract_token_folder> -x 1000 -p ${contract_token}
 
-$cleos1 push action ${contract_chain} setglobal '["kylin","<Kylin testnet chain_id>","pipeline"]' -p ${contract_chain}
+# if check_relay_auth is set to true, relay account should be registered to allown ibc_plugin use it to push transactions.
+relay_account=ibc3relay333
+$cleos_bos push action ${contract_chain} relay  '["add",'${relay_account}']' -p ${contract_chain}
 
-$cleos2 set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
-$cleos1 push action ${contract_token} setglobal '["bostest",true]' -p ${contract_token}
-$cleos1 push action ${contract_token} regpeerchain '["kylin","https://www.cryptokylin.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
+$cleos_bos push action ${contract_chain} setglobal '["kylin","<Kylin testnet chain_id>","pipeline"]' -p ${contract_chain}
+
+$cleos_bos set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
+$cleos_bos push action ${contract_token} setglobal '["bostest",true]' -p ${contract_token}
+$cleos_bos push action ${contract_token} regpeerchain '["kylin","https://www.cryptokylin.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
 ```
 
 After initializing the two contracts, the relay nodes of two chains will start synchronizing a first block header of 
@@ -133,26 +141,26 @@ Please refer to detailed content [Token_Registration_and_Management](./Token_Reg
 ```bash
 eos_admin=ibc3admin333
 
-$cleos1 push action ${contract_token} regacpttoken \
-    '["eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
+$cleos_kylin push action ${contract_token} regacpttoken \
+    '["eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
     "1000000.0000 EOS",1000,"cryptokylin","https://www.cryptokylin.io","ibc3admin333","fixed","0.1000 EOS",0.01,"0.1000 EOS",true]' -p ${contract_token}
         
-$cleos2 push action ${contract_token} regpegtoken \
-    '["kylin","eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOSPG","1.0000 EOSPG","100000.0000 EOSPG",
-    "1000000.0000 EOSPG",1000,"ibc3admin333","0.1000 EOSPG",true]' -p ${contract_token} 
+$cleos_bos push action ${contract_token} regpegtoken \
+    '["kylin","eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
+    "1000000.0000 EOS",1000,"ibc3admin333","0.1000 EOS",true]' -p ${contract_token} 
 ```
 
 - register `BOS Token` (eosio.token contract on BOS testnet) on `ibc.token contracts on both Kylin and BOS testnet` to open a `Token channel` for it.  
 ```bash
 bos_admin=ibc3admin333
 
-$cleos2 push action ${contract_token} regacpttoken \
-    '["eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOS","1.0000 BOS","100000.0000 BOS",
+$cleos_bos push action ${contract_token} regacpttoken \
+    '["eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","100000.0000 BOS",
     "1000000.0000 BOS",1000,"bos organization","https://boscore.io","ibc3admin333","fixed","0.1000 BOS",0.01,"0.1000 BOS",true]' -p ${contract_token}
     
-$cleos1 push action ${contract_token} regpegtoken \
-    '["bostest","eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOSPG","1.0000 BOSPG","10000.0000 BOSPG",
-    "1000000.0000 BOSPG",1000,"ibc3admin333","0.1000 BOSPG",true]' -p ${contract_token}
+$cleos_kylin push action ${contract_token} regpegtoken \
+    '["bostest","eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
+    "1000000.0000 BOS",1000,"ibc3admin333","0.1000 BOS",true]' -p ${contract_token}
 ```
 
 After performing the above steps, you need to wait for a period of time, preferably more than 6 minutes, and watch the logs of the two relay nodes.
@@ -175,22 +183,22 @@ bos_acnt2=bosaccount12  # account on BOS testnet
 
 - send EOS form Kylin testnet ${kylin_acnt1} to BOS testnet ${bos_acnt1}  
 ```bash
-$cleos1 transfer ${kylin_acnt1} ${contract_token} "1.0000 EOS" ${bos_acnt1}"@bostest have a nice day!" -p ${kylin_acnt1}
+$cleos_kylin transfer ${kylin_acnt1} ${contract_token} "1.0000 EOS" ${bos_acnt1}"@bostest have a nice day!" -p ${kylin_acnt1}
 ```
 
 - withdraw EOS(peg token) form BOS testnet ${bos_acnt1} to Kylin testnet ${kylin_acnt2}  
 ```bash
-$cleos2 push action ${contract_token} transfer '["'${bos_acnt1}'","'${contract_token}'","1.0000 EOSPG" "'${kylin_acnt2}'@kylin"]' -p ${bos_acnt1}
+$cleos_bos push action ${contract_token} transfer '["'${bos_acnt1}'","'${contract_token}'","1.0000 EOS" "'${kylin_acnt2}'@kylin"]' -p ${bos_acnt1}
 ```
 
 - send BOS form BOS testnet ${bos_acnt1} to Kylin testnet ${kylin_acnt1}  
 ```bash
-$cleos2 transfer ${bos_acnt1} ${contract_token} "1.0000 BOS" ${kylin_acnt1}"@kylin have a nice day!" -p ${bos_acnt1}
+$cleos_bos transfer ${bos_acnt1} ${contract_token} "1.0000 BOS" ${kylin_acnt1}"@kylin have a nice day!" -p ${bos_acnt1}
 ```
 
 - withdraw BOS(peg token) form Kylin testnet ${kylin_acnt1} to BOS testnet ${bos_acnt2}  
 ```bash
-$cleos1 push action ${contract_token} transfer '["'${kylin_acnt1}'","'${contract_token}'","1.0000 BOSPG" "'${bos_acnt2}'@bostest"]' -p ${kylin_acnt1}
+$cleos_kylin push action ${contract_token} transfer '["'${kylin_acnt1}'","'${contract_token}'","1.0000 BOS" "'${bos_acnt2}'@bostest"]' -p ${kylin_acnt1}
 ```
 After executing above commands, you need to wait for a period of time to receive your token on the peer chain.
 It takes about six minutes to transfer from Kylin to BOS, and transfer from BOS to Kylin takes about 10 seconds.
