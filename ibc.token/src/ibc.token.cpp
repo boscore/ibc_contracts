@@ -126,7 +126,8 @@ namespace eosio {
       /// table 'stat' and 'accept'
       eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
       auto idx = _stats.get_index<"origtokensym"_n>();
-      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end(), "token symbol conflict in table 'stats' and 'accepts'");
+      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end() || original_contract == _self,
+            "token symbol conflict in table 'stats' and 'accepts'");
 
       eosio_assert( max_accept.is_valid(), "invalid max_accept");
       eosio_assert( max_accept.amount > 0, "max_accept must be positive");
