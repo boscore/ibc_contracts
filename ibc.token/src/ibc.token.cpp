@@ -760,14 +760,17 @@ namespace eosio {
       /**
        * 'ibc_transfer' means send a token from its original issued chain to its peg-token chain.
        * 'ibc_withdraw' means send a token from its  peg-token chain to its original issued chain.
+       *
+       * If the symbol code is not registered in table '_stats', this is a ibc_withdraw.
+       * If the symbol code is registered in table '_stats', means that it must be a pegtoken, then check whether the
+       * original chain of the symbol recorded in table '_stats' is same with parameter 'from_chain' of the
+       * action 'cash(...)', if they are the same, it's ibc_transfer, otherwise, it's ibc_withdraw.
        */
       bool ibc_transfer = false;
-      
       {
          auto itr = _stats.find( sym.code().raw() );
-         if ( itr != _stats.end() ){
+         if ( itr != _stats.end() && from_chain == itr->peerchain_name ){
             ibc_transfer = true;
-            // eosio_assert( _accepts.find(sym.code().raw()) == _accepts.end(), "token symbol conflict in table 'stats' and 'accepts'");
          }
       }
       
