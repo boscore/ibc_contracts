@@ -141,7 +141,7 @@ $ cleos push action ${contract_token} regacpttoken \
 
 #### setacptasset
 ``` 
-void setacptasset( name contract, string which, asset quantity );
+void setacptasset( symbol_code symcode, string which, asset quantity );
 ```
 Modify only one member of type `asset` in currency_accept struct.
  - **contract** the name of one registered acceptable token contract.
@@ -151,7 +151,7 @@ Modify only one member of type `asset` in currency_accept struct.
   
 #### setacptstr
 ``` 
-  void setacptstr( name contract, string which, string value );
+  void setacptstr( symbol_code symcode, string which, string value );
 ```
 Modify only one member of type `string` in currency_accept struct.
  - **contract** the name of one registered acceptable token contract.
@@ -161,7 +161,7 @@ Modify only one member of type `string` in currency_accept struct.
  
 #### setacptint
 ``` 
-  void setacptint( name contract, string which, uint64_t value );
+  void setacptint( symbol_code symcode, string which, uint64_t value );
 ```
 Modify only one member of type `int` in currency_accept struct.
  - **contract** the name of one registered acceptable token contract.
@@ -171,7 +171,7 @@ Modify only one member of type `int` in currency_accept struct.
  
 #### setacptbool
 ``` 
-  void setacptbool( name contract, string which, bool value );
+  void setacptbool( symbol_code symcode, string which, bool value );
 ```
 Modify only one member of type `bool` in currency_accept struct.
  - **contract** the name of one registered acceptable token contract.
@@ -181,7 +181,7 @@ Modify only one member of type `bool` in currency_accept struct.
  
 #### setacptfee
 ``` 
-  void setacptfee( name   contract,
+  void setacptfee( symbol_code symcode,
                    name   kind,
                    name   fee_mode,
                    asset  fee_fixed,

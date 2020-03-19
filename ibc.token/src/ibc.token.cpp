@@ -96,8 +96,6 @@ namespace eosio {
    }
 
    void token::regacpttoken( name        original_contract,
-                             symbol      orig_token_symbol,
-                             symbol      peg_token_symbol,
                              asset       max_accept,
                              asset       min_once_transfer,
                              asset       max_once_transfer,
@@ -116,32 +114,24 @@ namespace eosio {
       eosio_assert( is_account( original_contract ), "original_contract account does not exist");
       eosio_assert( is_account( administrator ), "administrator account does not exist");
 
-      eosio_assert( orig_token_symbol.is_valid(), "orig_token_symbol invalid");
-      eosio_assert( peg_token_symbol.is_valid(), "peg_token_symbol invalid");
-      eosio_assert( orig_token_symbol.precision() == peg_token_symbol.precision(), "precision mismatch");
-
-      /// When multiple chains make up a ibc hub system, to avoid unnecessary confusion,
-      /// all pegtoken must use the same symbol as its original token
-      /// and symbols should be unique in the whole multi-chain IBC system, so we no longer allow same symbol exist in the both
-      /// table 'stat' and 'accept'
-      eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
-      auto idx = _stats.get_index<"origtokensym"_n>();
-      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end() || original_contract == _self,
+      /// When multiple chains make up a ibc hub system, to avoid unnecessary confusion, symbols should be unique in
+      /// the whole multi-chain IBC system
+      eosio_assert( _stats.find(max_accept.symbol.code().raw()) == _stats.end() || original_contract == _self,
             "token symbol conflict in table 'stats' and 'accepts'");
 
       eosio_assert( max_accept.is_valid(), "invalid max_accept");
       eosio_assert( max_accept.amount > 0, "max_accept must be positive");
-      eosio_assert( max_accept.symbol           == orig_token_symbol &&
-                    min_once_transfer.symbol    == orig_token_symbol &&
-                    max_once_transfer.symbol    == orig_token_symbol &&
-                    max_daily_transfer.symbol   == orig_token_symbol &&
-                    service_fee_fixed.symbol    == orig_token_symbol &&
-                    failed_fee.symbol     == orig_token_symbol &&
-                    min_once_transfer.amount    > 0 &&
+      auto symbol = max_accept.symbol;
+      eosio_assert( min_once_transfer.symbol    == symbol &&
+                    max_once_transfer.symbol    == symbol &&
+                    max_daily_transfer.symbol   == symbol &&
+                    service_fee_fixed.symbol    == symbol &&
+                    failed_fee.symbol           == symbol &&
+                    min_once_transfer.amount    >  0 &&
                     max_once_transfer.amount    > min_once_transfer.amount &&
                     max_daily_transfer.amount   > max_once_transfer.amount &&
                     service_fee_fixed.amount    >= 0 &&
-                    failed_fee.amount     >= 0 , "invalid asset");
+                    failed_fee.amount           >= 0 , "invalid parameters");
 
       eosio_assert( organization.size() < 256, "organization has more than 256 bytes");
       eosio_assert( website.size() < 256, "website has more than 256 bytes");
@@ -152,13 +142,9 @@ namespace eosio {
       eosio_assert( service_fee_fixed.amount * 5 <= min_once_transfer.amount, "service_fee_fixed.amount * 5 <= min_once_transfer.amount assert failed");
       eosio_assert( failed_fee.amount * 10 <= min_once_transfer.amount, "failed_fee.amount * 10 <= min_once_transfer.amount assert failed");
 
-      auto existing = _accepts.find( original_contract.value );
-      eosio_assert( existing == _accepts.end(), "token contract already exist" );
-
       _accepts.emplace( _self, [&]( auto& r ){
          r.original_contract  = original_contract;
-         r.peg_token_symbol   = peg_token_symbol;
-         r.accept             = asset{ 0, orig_token_symbol };
+         r.accept             = asset{ 0, symbol };
          r.max_accept         = max_accept;
          r.min_once_transfer  = min_once_transfer;
          r.max_once_transfer  = max_once_transfer;
@@ -179,8 +165,8 @@ namespace eosio {
       });
    }
 
-   void token::setacptasset( name contract, string which, asset quantity ) {
-      const auto& acpt = get_currency_accept( contract );
+   void token::setacptasset( symbol_code symcode, string which, asset quantity ) {
+      const auto& acpt = get_currency_accept( symcode );
       eosio_assert( quantity.symbol == acpt.accept.symbol, "invalid symbol" );
 
       require_auth( acpt.administrator );
@@ -208,8 +194,8 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
-   void token::setacptstr( name contract, string which, string value ) {
-      const auto& acpt = get_currency_accept( contract );
+   void token::setacptstr( symbol_code symcode, string which, string value ) {
+      const auto& acpt = get_currency_accept( symcode );
       eosio_assert( value.size() < 256, "value string has more than 256 bytes");
 
       require_auth( acpt.administrator );
@@ -225,8 +211,8 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
-   void token::setacptint( name contract, string which, uint64_t value ) {
-      const auto& acpt = get_currency_accept( contract );
+   void token::setacptint( symbol_code symcode, string which, uint64_t value ) {
+      const auto& acpt = get_currency_accept( symcode );
       require_auth( _self );
 
       if ( which == "max_tfs_per_minute" ){
@@ -237,8 +223,8 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
-   void token::setacptbool( name contract, string which, bool value ) {
-      const auto& acpt = get_currency_accept( contract );
+   void token::setacptbool( symbol_code symcode, string which, bool value ) {
+      const auto& acpt = get_currency_accept( symcode );
       require_auth( acpt.administrator );
 
       if ( which == "active" ){
@@ -248,14 +234,14 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
-   void token::setacptfee( name   contract,
+   void token::setacptfee( symbol_code symcode,
                            name   kind,
                            name   fee_mode,
                            asset  fee_fixed,
                            double fee_ratio ) {
       require_auth( _self );
 
-      const auto& acpt = get_currency_accept( contract );
+      const auto& acpt = get_currency_accept( symcode );
       eosio_assert( fee_mode == "fixed"_n || fee_mode == "ratio"_n, "mode can only be fixed or ratio");
       eosio_assert( fee_fixed.symbol == acpt.accept.symbol && fee_fixed.amount >= 0, "service_fee_fixed invalid" );
       eosio_assert( 0 <= fee_ratio && fee_ratio <= 0.05 , "service_fee_ratio invalid");
@@ -279,8 +265,6 @@ namespace eosio {
    
    void token::regpegtoken( name        peerchain_name,
                             name        peerchain_contract,
-                            symbol      orig_token_symbol,
-                            symbol      peg_token_symbol,
                             asset       max_supply,
                             asset       min_once_withdraw,
                             asset       max_once_withdraw,
@@ -292,29 +276,23 @@ namespace eosio {
       require_auth( _self );
       eosio_assert( is_account( administrator ), "administrator account does not exist");
 
-      eosio_assert( orig_token_symbol.is_valid(), "orig_token_symbol invalid");
-      eosio_assert( peg_token_symbol.is_valid(), "peg_token_symbol invalid");
-      eosio_assert( orig_token_symbol.precision() == peg_token_symbol.precision(), "precision mismatch");
-
-      /// @ref token::regacpttoken(...)
-      eosio_assert( peg_token_symbol == orig_token_symbol, "peg_token_symbol must equal to orig_token_symbol");
-      auto idx = _accepts.get_index<"pegtokensym"_n>();
-      eosio_assert( idx.find(orig_token_symbol.code().raw()) == idx.end(), "token symbol conflict in table 'stats' and 'accepts'");
+      eosio_assert( _accepts.find(max_supply.symbol.code().raw()) == _accepts.end(), "token symbol conflict in table 'stats' and 'accepts'");
 
       eosio_assert( max_supply.is_valid(), "invalid max_supply");
       eosio_assert( max_supply.amount > 0, "max_supply must be positive");
-      eosio_assert( max_supply.symbol           == peg_token_symbol &&
-                    min_once_withdraw.symbol    == peg_token_symbol &&
-                    max_once_withdraw.symbol    == peg_token_symbol &&
-                    max_daily_withdraw.symbol   == peg_token_symbol &&
-                    failed_fee.symbol     == peg_token_symbol &&
+      auto symbol = max_supply.symbol;
+      eosio_assert( max_supply.symbol           == symbol &&
+                    min_once_withdraw.symbol    == symbol &&
+                    max_once_withdraw.symbol    == symbol &&
+                    max_daily_withdraw.symbol   == symbol &&
+                    failed_fee.symbol           == symbol &&
                     min_once_withdraw.amount    > 0 &&
                     max_once_withdraw.amount    > min_once_withdraw.amount &&
                     max_daily_withdraw.amount   > max_once_withdraw.amount &&
-                    failed_fee.amount     >= 0 , "invalid asset");
+                    failed_fee.amount           >= 0 , "invalid parameters");
 
       eosio_assert( peerchain_name != name(), "peerchain_name can not be empty");
-      eosio_assert( _peerchains.find(peerchain_name.value) != _peerchains.end(), "peerchain not registered");
+      eosio_assert( _peerchains.find(peerchain_name.value) != _peerchains.end(), "peerchain has not registered");
       eosio_assert( peerchain_contract != name(), "peerchain_contract can not be empty");
 
       eosio_assert( failed_fee.amount * 10 <= min_once_withdraw.amount, "failed_fee.amount * 10 <= min_once_withdraw.amount assert failed");
@@ -332,8 +310,7 @@ namespace eosio {
          r.administrator      = administrator;
          r.peerchain_name     = peerchain_name;
          r.peerchain_contract = peerchain_contract;
-         r.orig_token_symbol  = orig_token_symbol;
-         r.failed_fee   = failed_fee;
+         r.failed_fee         = failed_fee;
          r.total_issue        = asset{ 0, max_supply.symbol };
          r.total_issue_times  = 0;
          r.total_withdraw     = asset{ 0, max_supply.symbol };
@@ -481,7 +458,7 @@ namespace eosio {
       // check chain active
       eosio_assert( pch.active, "peer chain is not active");
 
-      const auto& acpt = get_currency_accept( original_contract );
+      const auto& acpt = get_currency_accept( quantity.symbol.code() );
       eosio_assert( acpt.active, "not active");
 
       eosio_assert( quantity.symbol == acpt.accept.symbol, "symbol does not match");
@@ -786,18 +763,16 @@ namespace eosio {
        */
       bool ibc_transfer = false;
       
-      { 
-         auto idx = _stats.get_index<"origtokensym"_n>();
-         auto itr = idx.find( sym.code().raw() );
-         if ( itr != idx.end() ){
+      {
+         auto itr = _stats.find( sym.code().raw() );
+         if ( itr != _stats.end() ){
             ibc_transfer = true;
-            auto idx2 = _accepts.get_index<"pegtokensym"_n>();
-            eosio_assert( idx2.find(sym.code().raw()) == idx2.end(), "token symbol conflict in table 'stats' and 'accepts'");
+            // eosio_assert( _accepts.find(sym.code().raw()) == _accepts.end(), "token symbol conflict in table 'stats' and 'accepts'");
          }
       }
       
       if ( ibc_transfer ){   // issue peg token to user
-         const auto& st = get_currency_stats_by_orig_token_symbol( sym.code() );
+         const auto& st = get_currency_stats( sym.code() );
          eosio_assert( st.active, "not active");
          eosio_assert( st.peerchain_name == from_chain, "from_chain must equal to st.peerchain_name");
          eosio_assert( st.peerchain_contract == actn.account, " action.account not correct");
@@ -828,7 +803,7 @@ namespace eosio {
 
          update_stats2( st.supply.symbol.code() );
       } else {  // withdraw accepted token to user
-         const auto& acpt = get_currency_accept_by_peg_token_symbol( quantity.symbol.code() );
+         const auto& acpt = get_currency_accept( quantity.symbol.code() );
          eosio_assert( acpt.active, "not active");
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
@@ -971,7 +946,7 @@ namespace eosio {
       print( memo.c_str() );
 
       if ( action_info.contract != _self ){  // rollback ibc transfer
-         const auto& acpt = get_currency_accept( action_info.contract );
+         const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= action_info.quantity;
             r.total_transfer -= action_info.quantity;
@@ -1050,7 +1025,7 @@ namespace eosio {
          transfer_action_info action_info = record.action;
 
          if ( action_info.contract != _self ){  // rollback ibc transfer
-            const auto& acpt = get_currency_accept( action_info.contract );
+            const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
                r.accept -= action_info.quantity;
                r.total_transfer -= action_info.quantity;
@@ -1202,28 +1177,18 @@ namespace eosio {
    }
 
    // ---- currency_accept related methods ----
-   const token::currency_accept& token::get_currency_accept( name contract ){
-      return _accepts.get( contract.value, "token of contract does not support" );
+   const token::currency_accept& token::get_currency_accept_by_orig_contract( name contract ){
+      auto idx = _accepts.get_index<"origcontract"_n>();
+      return idx.get( contract.value, "token of contract does not support" );
    }
 
-   const token::currency_accept& token::get_currency_accept_by_symbol( symbol_code symcode ){
-      auto idx = _accepts.get_index<"origtokensym"_n>();
-      return idx.get( symcode.raw(),"token with symbol does not support" );
-   }
-
-   const token::currency_accept& token::get_currency_accept_by_peg_token_symbol( symbol_code symcode ){
-      auto idx = _accepts.get_index<"pegtokensym"_n>();
-      return idx.get( symcode.raw(),"token with symbol does not support" );
+   const token::currency_accept& token::get_currency_accept( symbol_code symcode ){
+      return _accepts.get( symcode.raw(), "token with symbol does not support" );
    }
 
    // ---- currency_stats related methods  ----
    const token::currency_stats& token::get_currency_stats( symbol_code symcode ){
       return _stats.get( symcode.raw(), "token with symbol does not exist");
-   }
-
-   const token::currency_stats& token::get_currency_stats_by_orig_token_symbol( symbol_code symcode ){
-      auto idx = _stats.get_index<"origtokensym"_n>();
-      return idx.get( symcode.raw(),"token with symbol does not support" );
    }
 
    // ---- original_trx_info related methods  ----

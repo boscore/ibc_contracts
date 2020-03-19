@@ -74,8 +74,6 @@ namespace eosio {
 
       [[eosio::action]]
       void regacpttoken( name        original_contract,
-                         symbol      orig_token_symbol,  // redundant, facilitate indexing and checking
-                         symbol      peg_token_symbol,
                          asset       max_accept,
                          asset       min_once_transfer,
                          asset       max_once_transfer,
@@ -91,19 +89,19 @@ namespace eosio {
                          bool        active );  // when non active, transfer not allowed, but cash trigger by peerchain withdraw can still execute
 
       [[eosio::action]]
-      void setacptasset( name contract, string which, asset quantity );
+      void setacptasset( symbol_code symcode, string which, asset quantity );
 
       [[eosio::action]]
-      void setacptstr( name contract, string which, string value );
+      void setacptstr( symbol_code symcode, string which, string value );
 
       [[eosio::action]]
-      void setacptint( name contract, string which, uint64_t value );
+      void setacptint( symbol_code symcode, string which, uint64_t value );
 
       [[eosio::action]]
-      void setacptbool( name contract, string which, bool value );
+      void setacptbool( symbol_code symcode, string which, bool value );
 
       [[eosio::action]]
-      void setacptfee( name   contract,
+      void setacptfee( symbol_code symcode,
                        name   kind,   // "success"_n or "failed"_n
                        name   fee_mode,
                        asset  fee_fixed,
@@ -112,8 +110,6 @@ namespace eosio {
       [[eosio::action]]
       void regpegtoken( name        peerchain_name,
                         name        peerchain_contract,  // the original token contract on peer chain
-                        symbol      orig_token_symbol,
-                        symbol      peg_token_symbol,    // redundant, facilitate indexing and checking
                         asset       max_supply,
                         asset       min_once_withdraw,
                         asset       max_once_withdraw,
@@ -285,7 +281,6 @@ namespace eosio {
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_accept {
          name        original_contract;
-         symbol      peg_token_symbol;
          asset       accept;
          asset       max_accept;
          asset       min_once_transfer;
@@ -314,18 +309,14 @@ namespace eosio {
             asset       daily_wd_sum;
          } mutables;
 
-         uint64_t  primary_key()const { return original_contract.value; }
-         uint64_t  by_orig_token_symbol()const { return max_accept.symbol.code().raw(); }
-         uint64_t  by_peg_token_symbol()const { return peg_token_symbol.code().raw(); }
+         uint64_t  primary_key()const { return accept.symbol.code().raw(); } /// by token symbol
+         uint64_t  by_original_contract()const { return original_contract.value; }
       };
       eosio::multi_index< "accepts"_n, currency_accept,
-         indexed_by<"origtokensym"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_orig_token_symbol> >,
-         indexed_by<"pegtokensym"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_peg_token_symbol> >
+         indexed_by<"origcontract"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_original_contract> >
       > _accepts;
-
-      const currency_accept& get_currency_accept( name contract );
-      const currency_accept& get_currency_accept_by_symbol( symbol_code symcode );
-      const currency_accept& get_currency_accept_by_peg_token_symbol( symbol_code symcode );
+      const currency_accept& get_currency_accept( symbol_code symcode );
+      const currency_accept& get_currency_accept_by_orig_contract( name contract );
 
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_stats {
@@ -338,7 +329,6 @@ namespace eosio {
          name        administrator;
          name        peerchain_name;
          name        peerchain_contract;
-         symbol      orig_token_symbol;
          asset       failed_fee;
          asset       total_issue;
          uint64_t    total_issue_times;
@@ -356,15 +346,10 @@ namespace eosio {
          } mutables;
 
          uint64_t primary_key()const { return supply.symbol.code().raw(); }
-         uint64_t by_orig_token_sym()const { return orig_token_symbol.code().raw(); }
       };
-      typedef eosio::multi_index< "stats"_n, currency_stats,
-         indexed_by<"origtokensym"_n, const_mem_fun<currency_stats, uint64_t, &currency_stats::by_orig_token_sym> > > stats;
+      typedef eosio::multi_index< "stats"_n, currency_stats > stats;
       stats _stats;
-
       const currency_stats& get_currency_stats( symbol_code symcode );
-      const currency_stats& get_currency_stats_by_orig_token_symbol( symbol_code symcode );
-
 
       struct [[eosio::table]] account {
          asset    balance;
