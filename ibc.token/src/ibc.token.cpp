@@ -896,9 +896,11 @@ namespace eosio {
       transaction_receipt src_tf_trx_receipt = unpack<transaction_receipt>( args.orig_trx_packed_trx_receipt );
       eosio_assert( src_tf_trx_receipt.status == transaction_receipt::executed, "trx_receipt.status must be executed");
       packed_transaction src_pkd_trx = std::get<packed_transaction>(src_tf_trx_receipt.trx);
-      /* transaction src_trx = unpack<transaction>( src_pkd_trx.packed_trx );
-      eosio_assert( src_trx.actions.size() == 1, "orignal transaction contains more then one action" ); */
+      transaction src_trx = unpack<transaction>( src_pkd_trx.packed_trx );
+      eosio_assert( src_trx.actions.size() == 1, "orignal transaction contains more then one action" );
       eosio_assert( std::memcmp(orig_trx_id.hash, src_pkd_trx.id().hash, 32) == 0, "orig_trx_id mismatch" );
+
+      transfer_action_type src_trx_args = unpack<transfer_action_type>( src_trx.actions.front().data );
 
       // check cash_seq_num
       auto& pchm = _peerchainm.get( from_chain.value, "from_chain not registered");
@@ -920,8 +922,23 @@ namespace eosio {
       } else { // cash_trx_block_num < anchor_block_num
          chain::assert_anchor_block_and_transaction_mroot( pch.thischain_ibc_chain_contract, anchor_block_num, cash_trx_merkle_path.back() );
       }
-      // if orignal trx is withdraw, burn those token
-      if ( orig_action_info.contract == _self ){
+
+      /**
+       * If the symbol code is not registered in table '_stats', the orig_trx must be a ibc_transfer.
+       * If the symbol code is registered in table '_stats', means that it must be a pegtoken, then check whether the
+       * original chain of the symbol recorded in table '_stats' is same with to_chain of the orig_trx's, to_chain is
+       * record in the orig_trx's first action's memo string. if they are the same, it's ibc_withdraw, otherwise, it's ibc_transfer.
+       */
+
+      /// if orignal trx is withdraw, burn those token
+      auto memo_info = get_memo_info( src_trx_args.memo );
+      bool ibc_withdraw = false;
+      auto itr = _stats.find( src_trx_args.quantity.symbol.code().raw() );
+      if ( itr != _stats.end() && memo_info.peerchain == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ibc_withdraw ){
          sub_balance( _self, orig_action_info.quantity );
       }
 
