@@ -5,16 +5,19 @@
 
 #include <eosiolib/action.hpp>
 #include <eosiolib/transaction.hpp>
-#include <ibc.chain/ibc.chain.hpp>
-#include <ibc.token/ibc.token.hpp>
-
+#include <ibc.hub/ibc.hub.hpp>
 
 namespace eosio {
 
 
-   void hub::setglobal(name this_chain, bool active){
+   hub::hub( name s, name code, datastream<const char*> ds ):
+         contract( s, code, ds )
+   {
+   }
+   void hub::setglobal( name this_chain, bool active ){
 
    }
+
 
 
    /**
@@ -25,7 +28,9 @@ namespace eosio {
   * when start with "local", means this is a local chain transaction, do not any process and return directly
   */
    void hub::transfer_notify( name original_contract, name from, name to, asset quantity, string memo ) {
-      eosio_assert(false, "------------------");
+
+
+      print_f("*---- %   %  %  %  %----*", original_contract, from, to , quantity, memo);
 
 
    }
@@ -40,7 +45,7 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal))
+            EOSIO_DISPATCH_HELPER( eosio::hub, (setglobal))
          }
          return;
       }

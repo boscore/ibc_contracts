@@ -7,16 +7,23 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
-#include <ibc.token/types.hpp>
+//#include <ibc.chain/ibc.chain.hpp>
+#include <ibc.token/ibc.token.hpp>
+
 
 namespace eosio {
 
+   using std::string;
 
    class [[eosio::contract("ibc.hub")]] hub : public contract {
    public:
-      hub(name s, name code, datastream<const char *> ds){};
+      hub(name s, name code, datastream<const char *> ds);
 
       ~hub(){};
+
+      [[eosio::action]]
+      void setglobal( name this_chain, bool active );
+
 
       // called in C apply function
       void transfer_notify( name    code,
@@ -25,38 +32,22 @@ namespace eosio {
                             asset   quantity,
                             string  memo );
 
-      [[eosio::action]]
-      void setglobal(name this_chain, bool active);
 
    private:
 
-      struct [[eosio::table("globals")]] global_state {
-         global_state(){}
-
-         name              this_chain;
-         bool              active = true; // use as global locks
-
-         EOSLIB_SERIALIZE( global_state, (this_chain)(active))
-      };
-
-
-      // code,scope(_self,peerchain_name.value)
-      struct [[eosio::table]] hub_trx_info {
-         uint64_t                id; // auto-increment
-
-
-         uint64_t primary_key()const { return balance.symbol.code().raw(); }
-      };
-      typedef eosio::multi_index< "chainassets"_n, peer_chain_asset > chainassets_table;
+//
+//      // code,scope(_self,peerchain_name.value)
+//      struct [[eosio::table]] hub_trx_info {
+//         uint64_t                id; // auto-increment
+//
+//
+//         uint64_t primary_key()const { return balance.symbol.code().raw(); }
+//      };
+//      typedef eosio::multi_index< "chainassets"_n, peer_chain_asset > chainassets_table;
 
 
 
 
-
-
-
-
-      int a;
    };
 
 
