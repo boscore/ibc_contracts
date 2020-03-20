@@ -1407,66 +1407,96 @@ namespace eosio {
       });
    }
 
+   string get_value_str_by_key_str(const string& src, const string& key_str ){
+      string src_str = src;
+      string value_str;
+      auto pos = src_str.find( key_str );
+      if ( pos == std::string::npos ){ return string(); }
+
+      src_str = src_str.substr(pos + key_str.length());
+      trim( src_str );
+      pos = src_str.find("=");
+      if ( pos == std::string::npos ){ return string(); }
+
+      src_str = src_str.substr(1);
+      trim( src_str );
+      pos = src_str.find(' ');
+      if ( pos == std::string::npos ){
+         value_str = src_str;
+      } else {
+         value_str = src_str.substr(0,pos);
+      }
+
+      return value_str;
+   }
+
    const string error_info2 = "for the transfer action from the hub accout,it's memo string format "
-                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [optional user defined string]";
+                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [relayer=account] [optional user defined string]";
 
    void token::ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo  ){
+      /// --- check to ---
+      eosio_assert( to == _self, "the to account of hub transfer must be _self");
 
-      /// parse memo string
+      /// --- check memo string ---
+      /// 1. parse memo string
       string tmp_memo = memo;
       auto memo_info = get_memo_info( tmp_memo );
 
-      /// get one key-value.
-      static const key_str = "orig_trx_id";
-      string value_str;
-      auto pos = tmp_memo.find( key_str );
-      eosio_assert( pos != std::string::npos, "no key=value found for key: orig_trx_id ");
-      tmp_memo = tmp_memo.substr(pos + key_str.length());
-      trim( tmp_memo );
-      pos = tmp_memo.find("=");
-      eosio_assert( pos == 0, error_info2.c_str() );
-      tmp_memo = tmp_memo.substr(1);
-      trim( tmp_memo );
-      pos = tmp_memo.find(' ');
-      if ( pos = std::string::npos ){
-         value_str = tmp_memo;
-      } else {
-         value_str = tmp_memo.substr(0,pos);
-      }
+      /// 2. get one key-value.
+      string value_str = get_value_str_by_key_str( memo, "orig_trx_id");
+      eosio_assert( value_str.size() != 0, error_info2.c_str());
       eosio_assert( value_str.size() == 64, "orig_trx_id value not valid");
+      capi_checksum256 orig_trx_id = string_to_capi_checksum256( value_str );
 
-      capi_checksum256 value
-
-
-
-      /// get recored
+      /// 3. get recored
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"origtrxid"_n>();
-      eosio_assert( idx.find() );
+      const auto& hub_trx_p = idx.find(fixed_bytes<32>(orig_trx_id.hash));
+      eosio_assert( hub_trx_p != idx.end(), "original transaction not found with the specified id");
 
+      /// 4. check ...
+      eosio_assert( memo_info.peerchain == hub_trx_p->to_chain, "memo_info.peerchain == hub_trx_p->to_chain assert failed");
+      eosio_assert( memo_info.receiver == hub_trx_p->to_account, "memo_info.receiver == hub_trx_p->to_account assert failed");
 
+      /// --- check quantity ---
+      const auto& acpt = get_currency_accept( quantity.symbol.code() );
+      eosio_assert( acpt.active, "not active");
 
+      int64_t diff = 0;
+      if ( acpt.service_fee_mode == "fixed"_n ){
+         diff = acpt.service_fee_fixed.amount;
+      } else {
+         diff = int64_t( quantity.amount * acpt.service_fee_ratio );
+      }
 
+      eosio_assert(quantity.symbol == hub_trx_p->quantity.symbol, "quantity.symbol == hub_trx_p->quantity.symbol assert failed");
+      eosio_assert(hub_trx_p->quantity.amount >= quantity.amount, "hub_trx_p->quantity.amount >= quantity.amount assert failed");
+      eosio_assert(hub_trx_p->quantity.amount > diff, "hub_trx_p->quantity.amount > diff assert failed");
+      eosio_assert(quantity.amount >= hub_trx_p->quantity.amount - diff, "quantity.amount >= hub_trx_p->quantity.amount - diff assert failed");
 
+      /// transfer fee to receiver
+      string relayer = get_value_str_by_key_str( memo, "relayer");
+      if ( relayer.size() ){
+         name receiver = name(relayer);
+         asset new_quantity{diff, quantity.symbol};
+         sub_balance( hub_account, new_quantity );
+         add_balance( receiver, new_quantity, _self );
+      }
 
-
-
-
-      eosio_assert(memo_info.receiver != name(),"receiver not provide");
-
-
-
-
-
-
-
-
-
-
+      /// recored to hubtrxs table
+      _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+         r.hub_trx_id         = get_trx_id();
+         r.hub_trx_time_slot  = get_block_time_slot();
+      });
    }
 
    void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
-
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
+      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      if( hub_trx_p != idx.end()){
+         _hubtrxs.erase( *hub_trx_p );
+      }
    }
 
 } /// namespace eosio

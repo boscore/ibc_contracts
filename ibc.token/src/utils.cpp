@@ -3,6 +3,8 @@
  *  @copyright defined in eos/LICENSE.txt
  */
 
+#include <ctype.h>
+
 namespace eosio{
 
    void trim(string &s) {
@@ -40,8 +42,24 @@ namespace eosio{
       return r;
    }
 
+   uint8_t hex_char_to_uint8( char c ){
+      char lower_c = tolower(c);
+      const string hex_code = "0123456789abcdef";
+      auto pos = hex_code.find(lower_c);
+      eosio_assert(pos != std::string::npos, "it's not a hex char");
+      return pos;
+   }
+
    string capi_checksum256_to_string( capi_checksum256 value ){
       return to_hex( value.hash, 32 );
    }
 
+   capi_checksum256 string_to_capi_checksum256( const string& str ){
+      eosio_assert( str.size() == 64, "capi_checksum256 string size must be 64");
+      capi_checksum256 ret;
+      for (int i = 0; i < 32; ++i ){
+         ret.hash[i] = ( hex_char_to_uint8(str[2*i]) << 4 ) + hex_char_to_uint8(str[2*i+1]);
+      }
+      return ret;
+   }
 }
