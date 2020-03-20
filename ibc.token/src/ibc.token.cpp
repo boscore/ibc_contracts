@@ -544,8 +544,17 @@ namespace eosio {
                          asset   quantity,
                          string  memo )
    {
+      eosio_assert( is_account( to ), "to account does not exist");
       eosio_assert( from != to, "cannot transfer to self" );
+
+#ifdef HUB
+      eosio_assert( hub_account != _self, "hub_account cannot be _self" );
+      if ( from != hub_account ){
+         require_auth( from );
+      }
+#elif
       require_auth( from );
+#endif
 
       eosio_assert( memo.size() <= 512, "memo has more than 512 bytes" );
 
@@ -564,7 +573,6 @@ namespace eosio {
          trigger_notify = true;
       }
 
-      eosio_assert( is_account( to ), "to account does not exist");
       auto sym = quantity.symbol.code();
       const auto& st = _stats.get( sym.raw(), "symbol(token) not registered");
 
@@ -583,6 +591,12 @@ namespace eosio {
       if ( trigger_notify ){
          transfer_notify( _self, from, to /** _self */, quantity, memo );
       }
+
+#ifdef HUB
+      if ( from == hub_account ) {
+         //todo
+      }
+#endif
    }
 
    void token::withdraw( name from, name peerchain_name, name peerchain_receiver, asset quantity, string memo ) {
@@ -802,6 +816,11 @@ namespace eosio {
             string new_memo = memo_info.notes;
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+#ifdef HUB
+            if ( to == hub_account ) {
+               //todo
+            }
+#endif
          }
 
          update_stats2( st.supply.symbol.code() );
@@ -853,6 +872,11 @@ namespace eosio {
             if ( new_memo.size() > 250 ) new_memo.resize( 250 );
             transfer_action_type action_data{ _self, to, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+#ifdef HUB
+            if ( to == hub_account ) {
+               //todo
+            }
+#endif
          }
       }
 
@@ -948,6 +972,12 @@ namespace eosio {
       _peerchainm.modify( pchm, same_payer, [&]( auto& r ) {
          r.cash_seq_num += 1;
       });
+
+#ifdef HUB
+      if ( src_trx_args.from == hub_account ) {
+               //todo check and delete recore in table hubtrxs
+      }
+#endif
    }
 
    void token::rollback( name peerchain_name, const transaction_id_type trx_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM consume from being maliciously occupied

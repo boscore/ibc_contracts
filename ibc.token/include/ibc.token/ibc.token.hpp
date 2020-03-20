@@ -11,6 +11,15 @@
 
 namespace eosio {
 
+   /**
+    *
+    */
+#define HUB
+
+#ifdef HUB
+#define hub_account "ibc.hub"_n
+#endif
+
    struct transfer_action_type {
       name    from;
       name    to;
@@ -445,6 +454,42 @@ namespace eosio {
       void sub_balance( name owner, asset value );
       void add_balance( name owner, asset value, name ram_payer );
       void verify_merkle_path( const std::vector<capi_checksum256>& merkle_path, digest_type check );
+
+      /// hub related structs and functions
+
+      // code,scope(_self,peerchain_name.value)
+      struct [[eosio::table]] hub_trx_info {
+         uint64_t              index;  // auto increment
+         uint64_t              block_time_slot;
+         name                  from_chain;
+         capi_checksum256      orig_trx_id;
+         name                  to_chain;
+         name                  to_account;
+         asset                 quantity,
+         capi_checksum256      hub_trx_id;
+
+         uint64_t primary_key()const { return index; }
+         uint64_t by_time_slot()const { return block_time_slot; }
+         fixed_bytes<32> by_orig_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
+         fixed_bytes<32> by_hub_trx_id()const { return fixed_bytes<32>(hub_trx_id.hash); }
+      };
+      typedef eosio::multi_index< "hubtrxs"_n, hub_trx_info,
+      indexed_by<"tslot"_n,       const_mem_fun<hub_trx_info, uint64_t,        &hub_trx_info::by_time_slot> >,
+      indexed_by<"origtrxid"_n,   const_mem_fun<hub_trx_info, fixed_bytes<32>, &hub_trx_info::by_orig_trx_id> >,
+      indexed_by<"hubtrxid"_n,    const_mem_fun<hub_trx_info, fixed_bytes<32>, &hub_trx_info::by_hub_trx_id> >
+      > hubtrxs_table;
+
+
+      void ibc_cash_to_hub(
+            const name&                            from_chain,
+            const transaction_id_type&             orig_trx_id,
+            const name&                            to_chain,
+            const name&                            to_account,
+            const asset&                           quantity,
+            const string&                          memo,
+
+      );
+      void ibc_transfer_from_hub();
    };
 
 } /// namespace eosio
