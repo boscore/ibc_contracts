@@ -20,13 +20,16 @@ namespace eosio {
          _peerchains( _self, _self.value ),
          _peerchainm( _self, _self.value ),
          _accepts( _self, _self.value ),
-         _stats( _self, _self.value )
+         _stats( _self, _self.value ),
+         _hub_globals( _self, _self.value )
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
+      _hubgs = _hub_globals.exists() ? _hub_globals.get() : hub_globals{};
    }
 
    token::~token(){
       _global_state.set( _gstate, _self );
+      _hub_globals.set( _hubgs, _self );
    }
    
    void token::setglobal( name this_chain, bool active ) {
@@ -594,7 +597,7 @@ namespace eosio {
 
 #ifdef HUB
       if ( from == hub_account ) {
-         //todo
+         ibc_transfer_from_hub( to, quantity, memo );
       }
 #endif
    }
@@ -818,7 +821,7 @@ namespace eosio {
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
 #ifdef HUB
             if ( to == hub_account ) {
-               //todo
+               ibc_cash_to_hub( seq_num, from_chain, orig_trx_id, quantity, memo_info.notes );
             }
 #endif
          }
@@ -874,7 +877,7 @@ namespace eosio {
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
 #ifdef HUB
             if ( to == hub_account ) {
-               //todo
+               ibc_cash_to_hub( seq_num, from_chain, orig_trx_id, quantity, memo_info.notes );
             }
 #endif
          }
@@ -975,7 +978,7 @@ namespace eosio {
 
 #ifdef HUB
       if ( src_trx_args.from == hub_account ) {
-               //todo check and delete recore in table hubtrxs
+         delete_by_hub_trx_id( orig_trx_id );
       }
 #endif
    }
@@ -1363,6 +1366,107 @@ namespace eosio {
             s.max_supply    = st1.max_supply;
          });
       }
+   }
+
+   const string error_info = "for the transfer action to the hub accout,it's memo string format "
+                       "must be: <account>@<hub_chain_name> >> <accout>@<dest_chain_name> [optional user defined string]";
+
+   void token::ibc_cash_to_hub( const uint64_t&                 cash_seq_num,
+                                const name&                     from_chain,
+                                const transaction_id_type&      orig_trx_id,
+                                const asset&                    quantity,
+                                const string&                   memo ){
+
+      /// parse memo string
+      string tmp_memo = memo;
+      trim( tmp_memo );
+      eosio_assert( memo.find("<< ") == 0, error_info.c_str() );
+      tmp_memo = tmp_memo.substr(3);
+      trim( tmp_memo );
+      auto memo_info = get_memo_info( tmp_memo );
+
+      /// assert ..
+      eosio_assert(memo_info.receiver != name(),"receiver not provide");
+      eosio_assert(memo_info.peerchain != from_chain, "can not hub transfer to it's original chain");
+      eosio_assert(memo_info.peerchain != _gstate.this_chain, "can not hub transfer to the hub-chain itself");
+      auto pch = _peerchains.get( memo_info.peerchain.value, "dest chain has not registered");
+      eosio_assert(pch.active, "dest chain is not active");
+
+      /// record to hub table
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      _hubtrxs.emplace( _self, [&]( auto& r ) {
+         r.cash_seq_num       = cash_seq_num;
+         r.cash_time_slot     = get_block_time_slot();
+         r.from_chain         = from_chain;
+         r.orig_trx_id        = orig_trx_id;
+         r.to_chain           = memo_info.peerchain ;
+         r.to_account         = memo_info.receiver;
+         r.quantity           = quantity;
+         r.hub_trx_id         = capi_checksum256();
+         r.hub_trx_time_slot  = 0;
+      });
+   }
+
+   const string error_info2 = "for the transfer action from the hub accout,it's memo string format "
+                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [optional user defined string]";
+
+   void token::ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo  ){
+
+      /// parse memo string
+      string tmp_memo = memo;
+      auto memo_info = get_memo_info( tmp_memo );
+
+      /// get one key-value.
+      static const key_str = "orig_trx_id";
+      string value_str;
+      auto pos = tmp_memo.find( key_str );
+      eosio_assert( pos != std::string::npos, "no key=value found for key: orig_trx_id ");
+      tmp_memo = tmp_memo.substr(pos + key_str.length());
+      trim( tmp_memo );
+      pos = tmp_memo.find("=");
+      eosio_assert( pos == 0, error_info2.c_str() );
+      tmp_memo = tmp_memo.substr(1);
+      trim( tmp_memo );
+      pos = tmp_memo.find(' ');
+      if ( pos = std::string::npos ){
+         value_str = tmp_memo;
+      } else {
+         value_str = tmp_memo.substr(0,pos);
+      }
+      eosio_assert( value_str.size() == 64, "orig_trx_id value not valid");
+
+      capi_checksum256 value
+
+
+
+      /// get recored
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"origtrxid"_n>();
+      eosio_assert( idx.find() );
+
+
+
+
+
+
+
+
+
+      eosio_assert(memo_info.receiver != name(),"receiver not provide");
+
+
+
+
+
+
+
+
+
+
+   }
+
+   void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
+
    }
 
 } /// namespace eosio
