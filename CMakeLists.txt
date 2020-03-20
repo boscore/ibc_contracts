@@ -31,7 +31,6 @@ endif()
 
 add_subdirectory(ibc.chain)
 add_subdirectory(ibc.token)
-add_subdirectory(ibc.hub)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
