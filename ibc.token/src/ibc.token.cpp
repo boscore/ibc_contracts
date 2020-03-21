@@ -565,7 +565,7 @@ namespace eosio {
       } else {
          ibc_transfer_from_hub( to, quantity, memo );
       }
-      #elif
+      #else
       require_auth( from );
       #endif
 
