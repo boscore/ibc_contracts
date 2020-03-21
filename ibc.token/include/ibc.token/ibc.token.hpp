@@ -473,6 +473,7 @@ namespace eosio {
          uint64_t              cash_seq_num; // set by seq_num in cash action
          uint64_t              cash_time_slot;
          name                  from_chain;
+         name                  from_account;
          capi_checksum256      orig_trx_id;
          name                  to_chain;
          name                  to_account;
@@ -492,11 +493,13 @@ namespace eosio {
 
       void ibc_cash_to_hub( const uint64_t&                 cash_seq_num,
                             const name&                     from_chain,
+                            const name&                     from_account,
                             const transaction_id_type&      orig_trx_id,
                             const asset&                    quantity,
                             const string&                   memo );
       void ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo );
-      void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );
+      void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
+      void rollback_by_hub_trx_id( const transaction_id_type& hub_trx_id );   // when ibc transmit fails
    };
 
 } /// namespace eosio

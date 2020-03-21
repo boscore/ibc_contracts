@@ -821,7 +821,7 @@ namespace eosio {
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
 #ifdef HUB
             if ( to == hub_account ) {
-               ibc_cash_to_hub( seq_num, from_chain, orig_trx_id, quantity, memo_info.notes );
+               ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, quantity, memo_info.notes );
             }
 #endif
          }
@@ -877,7 +877,7 @@ namespace eosio {
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
 #ifdef HUB
             if ( to == hub_account ) {
-               ibc_cash_to_hub( seq_num, from_chain, orig_trx_id, quantity, memo_info.notes );
+               ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, quantity, memo_info.notes );
             }
 #endif
          }
@@ -1042,6 +1042,9 @@ namespace eosio {
       }
 
       _origtrxs.erase( _origtrxs.find(it->id) );
+#ifdef HUB
+      rollback_by_hub_trx_id( trx_id );
+#endif
    }
 
    static const uint32_t min_distance = 3600 * 24 * 2;   // one day
@@ -1373,6 +1376,7 @@ namespace eosio {
 
    void token::ibc_cash_to_hub( const uint64_t&                 cash_seq_num,
                                 const name&                     from_chain,
+                                const name&                     from_account,
                                 const transaction_id_type&      orig_trx_id,
                                 const asset&                    quantity,
                                 const string&                   memo ){
@@ -1398,6 +1402,7 @@ namespace eosio {
          r.cash_seq_num       = cash_seq_num;
          r.cash_time_slot     = get_block_time_slot();
          r.from_chain         = from_chain;
+         r.from_account       = from_account;
          r.orig_trx_id        = orig_trx_id;
          r.to_chain           = memo_info.peerchain ;
          r.to_account         = memo_info.receiver;
@@ -1405,6 +1410,10 @@ namespace eosio {
          r.hub_trx_id         = capi_checksum256();
          r.hub_trx_time_slot  = 0;
       });
+
+      /// check max unfinished hub trxs
+      eosio_assert(_hubgs.unfinished_trxs < max_hub_unfinished_trxs, "to much unfinished hub trxs");
+      _hubgs.unfinished_trxs += 1;
    }
 
    string get_value_str_by_key_str(const string& src, const string& key_str ){
@@ -1455,8 +1464,18 @@ namespace eosio {
       eosio_assert( hub_trx_p != idx.end(), "original transaction not found with the specified id");
 
       /// 4. check ...
-      eosio_assert( memo_info.peerchain == hub_trx_p->to_chain, "memo_info.peerchain == hub_trx_p->to_chain assert failed");
-      eosio_assert( memo_info.receiver == hub_trx_p->to_account, "memo_info.receiver == hub_trx_p->to_account assert failed");
+      eosio_assert( std::memcmp(hub_trx_p->hub_trx_id.hash, capi_checksum256().hash, 32) == 0 &&
+                    hub_trx_p->hub_trx_time_slot == 0, "hub trx can not double spend!");
+
+      if ( memo_info.peerchain == hub_trx_p->to_chain ) {
+         eosio_assert( memo_info.receiver == hub_trx_p->to_account, "hub trx must transfer to it's dest account");
+      } else if ( memo_info.peerchain == hub_trx_p->from_chain ) {
+         eosio_assert( memo_info.receiver == hub_trx_p->from_account, "hub trx must transfer to it's original account");
+         auto slot = get_block_time_slot();
+         eosio_assert( slot - hub_trx_p->cash_time_slot > 240, "you can't transfer hub trx back to it's original chain within two minutes");
+      } else {
+         eosio_assert(false, "hub trx must transfer to it's dest chain or original chain");
+      }
 
       /// --- check quantity ---
       const auto& acpt = get_currency_accept( quantity.symbol.code() );
@@ -1496,6 +1515,19 @@ namespace eosio {
       auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
          _hubtrxs.erase( *hub_trx_p );
+         _hubgs.unfinished_trxs -= 1;
+      }
+   }
+
+   void token::rollback_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
+      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      if( hub_trx_p != idx.end()){
+         _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+            r.hub_trx_id         = capi_checksum256();
+            r.hub_trx_time_slot  = 0;
+         });
       }
    }
 
