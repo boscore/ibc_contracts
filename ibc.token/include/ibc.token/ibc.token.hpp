@@ -12,13 +12,15 @@
 namespace eosio {
 
    /**
-    *
+    * you can open or close the ibc-hub feature of this contract.
+    * if you want to open it, uncomment the line '#define HUB' bellow,
+    * and appoint one account to be the hub account by definition of macro: 'hub_account'
     */
-#define HUB
 
-#ifdef HUB
-#define hub_account "ibc.hub"_n
-#endif
+   // #define HUB
+   #ifdef HUB
+   #define hub_account "ibchub"_n
+   #endif
 
    struct transfer_action_type {
       name    from;
@@ -455,9 +457,11 @@ namespace eosio {
       void add_balance( name owner, asset value, name ram_payer );
       void verify_merkle_path( const std::vector<capi_checksum256>& merkle_path, digest_type check );
 
-      /// hub related macros, structs and functions
 
-#define max_hub_unfinished_trxs 1000
+      /**
+       *  ibc-hub related macros, structs and functions
+       */
+      #define max_hub_unfinished_trxs 1000
 
       struct [[eosio::table("hubgs")]] hub_globals {
          hub_globals(){}
@@ -466,7 +470,6 @@ namespace eosio {
       };
       eosio::singleton< "hubgs"_n, hub_globals >   _hub_globals;
       hub_globals                                  _hubgs;
-
       
       // code,scope(_self,_self.value)
       struct [[eosio::table]] hub_trx_info {
@@ -490,7 +493,6 @@ namespace eosio {
       indexed_by<"hubtrxid"_n,    const_mem_fun<hub_trx_info, fixed_bytes<32>, &hub_trx_info::by_hub_trx_id> >
       > hubtrxs_table;
 
-
       void ibc_cash_to_hub( const uint64_t&                 cash_seq_num,
                             const name&                     from_chain,
                             const name&                     from_account,
@@ -499,7 +501,7 @@ namespace eosio {
                             const string&                   memo );
       void ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo );
       void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
-      void rollback_by_hub_trx_id( const transaction_id_type& hub_trx_id );   // when ibc transmit fails
+      void rollback_hub_trx( const transaction_id_type& hub_trx_id );   // when ibc transmit fails
    };
 
 } /// namespace eosio
