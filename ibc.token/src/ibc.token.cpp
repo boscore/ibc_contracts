@@ -1553,6 +1553,12 @@ namespace eosio {
       }
    }
 
+   void token::hubinit( name hub_account ){
+      eosio_assert( _hubgs.is_open == false, "already init");
+      _hubgs.is_open = true;
+      _hubgs.hub_account = hub_account;
+   }
+
 } /// namespace eosio
 
 extern "C" {
@@ -1563,7 +1569,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close))
+            (lockall)(unlockall)(forceinit)(open)(close)(hubinit))
          }
          return;
       }

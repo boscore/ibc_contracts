@@ -204,6 +204,9 @@ namespace eosio {
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
 
+      [[eosio::action]]
+      void hubinit( name hub_account );
+
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {
          stats statstable( token_contract_account, token_contract_account.value );
@@ -450,13 +453,6 @@ namespace eosio {
       /**
        *  ibc-hub related macros, structs and functions
        */
-
-      /**
-       * you can open or close the ibc-hub feature of this contract.
-       * if you want to open it, uncomment the line '#define HUB' bellow,
-       * and appoint one account to be the hub account by definition of macro: 'hub_account'
-       */
-
       #define max_hub_unfinished_trxs 1000
 
       struct [[eosio::table("hubgs")]] hub_globals {
