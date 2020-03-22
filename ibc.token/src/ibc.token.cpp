@@ -892,7 +892,7 @@ namespace eosio {
       }
 
       if ( _hubgs.is_open && to == _hubgs.hub_account ){
-         ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, quantity, memo_info.notes );
+         ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, new_quantity, memo_info.notes );
       }
 
       trim_cashtrxs_table_or_not( from_chain );
@@ -1423,10 +1423,12 @@ namespace eosio {
          r.cash_time_slot     = get_block_time_slot();
          r.from_chain         = from_chain;
          r.from_account       = from_account;
+         r.from_quantity      = quantity;
          r.orig_trx_id        = orig_trx_id;
          r.to_chain           = memo_info.peerchain ;
          r.to_account         = memo_info.receiver;
-         r.quantity           = quantity;
+         r.to_quantity        = asset();
+         r.fee_receiver       = name();
          r.hub_trx_id         = capi_checksum256();
          r.hub_trx_time_slot  = 0;
       });
@@ -1508,37 +1510,28 @@ namespace eosio {
          diff = int64_t( quantity.amount * acpt.service_fee_ratio );
       }
 
-      eosio_assert(quantity.symbol == hub_trx_p->quantity.symbol, "quantity.symbol == hub_trx_p->quantity.symbol assert failed");
-      eosio_assert(hub_trx_p->quantity.amount >= quantity.amount, "hub_trx_p->quantity.amount >= quantity.amount assert failed");
-      eosio_assert(hub_trx_p->quantity.amount > diff, "hub_trx_p->quantity.amount > diff assert failed");
-      eosio_assert(quantity.amount >= hub_trx_p->quantity.amount - diff, "quantity.amount >= hub_trx_p->quantity.amount - diff assert failed");
+      eosio_assert(quantity.symbol == hub_trx_p->from_quantity.symbol, "quantity.symbol == hub_trx_p->from_quantity.symbol assert failed");
+      eosio_assert(hub_trx_p->from_quantity.amount >= quantity.amount, "hub_trx_p->from_quantity.amount >= quantity.amount assert failed");
+      eosio_assert(hub_trx_p->from_quantity.amount > diff, "hub_trx_p->from_quantity.amount > diff assert failed");
+      eosio_assert(quantity.amount >= hub_trx_p->from_quantity.amount - diff, "quantity.amount >= hub_trx_p->from_quantity.amount - diff assert failed");
 
       /// transfer fee to receiver
       string relayer = get_value_str_by_key_str( memo, "relayer");
       if ( relayer.size() ){
          name receiver = name(relayer);
          if ( is_account(receiver) ){
-            asset fee{hub_trx_p->quantity.amount - quantity.amount, quantity.symbol};
-            transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
-            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+            _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+               r.fee_receiver = receiver;
+            });
          }
       }
 
       /// recored to hubtrxs table
       _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+         r.to_quantity        = quantity;
          r.hub_trx_id         = get_trx_id();
          r.hub_trx_time_slot  = get_block_time_slot();
       });
-   }
-
-   void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
-      auto _hubtrxs = hubtrxs_table( _self, _self.value );
-      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
-      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
-      if( hub_trx_p != idx.end()){
-         _hubtrxs.erase( *hub_trx_p );
-         _hubgs.unfinished_trxs -= 1;
-      }
    }
 
    void token::rollback_hub_trx( const transaction_id_type& hub_trx_id ){
@@ -1547,10 +1540,34 @@ namespace eosio {
       auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
          _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+            r.to_quantity        = asset();
+            r.fee_receiver       = name();
             r.hub_trx_id         = capi_checksum256();
             r.hub_trx_time_slot  = 0;
          });
       }
+   }
+
+   void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
+      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      if( hub_trx_p == idx.end()){
+         return;
+      }
+
+      /// transfer fee to receiver
+      const auto& acpt = get_currency_accept( hub_trx_p->from_quantity.symbol.code() );
+      auto fee = hub_trx_p->from_quantity - hub_trx_p->to_quantity;
+      auto receiver = hub_trx_p->fee_receiver;
+      if ( receiver != name() && is_account(receiver) && fee.amount > 0 ){
+            transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
+            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+      }
+
+      /// delete
+      _hubtrxs.erase( *hub_trx_p );
+      _hubgs.unfinished_trxs -= 1;
    }
 
    void token::hubinit( name hub_account ){

@@ -471,10 +471,12 @@ namespace eosio {
          uint64_t              cash_time_slot;
          name                  from_chain;
          name                  from_account;
+         asset                 from_quantity;
          capi_checksum256      orig_trx_id;
          name                  to_chain;
          name                  to_account;
-         asset                 quantity;
+         asset                 to_quantity; /// minimum amount, note, this is not the original amount
+         name                  fee_receiver;
          capi_checksum256      hub_trx_id;
          uint64_t              hub_trx_time_slot;
 
