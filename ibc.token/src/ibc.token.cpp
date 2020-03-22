@@ -541,6 +541,21 @@ namespace eosio {
     *
     * when start with "local", means this is a local chain transaction
     * when to != _self, memo string will not be parsed
+    *
+    *
+    * To support ibc-hub feature, a new transfer()->cash()->cashconfirm() protocol must be added.
+    * for one token which is originally issued on the hub-chain in one contract.
+    * let's assume:
+    *   there are three blockchain:chaina chainb and chainc, and chainb be the hub chain
+    *   one token of chainb is registered to use ibc-hub, the token contract is 'eosio.token' and symbol is 'TOB'
+    *   the ibc.token contract on chainb is 'bosibc.io', and the hub account is 'hub.ibc'
+    * the new protocol must accept the following two transfer action be the same.
+    *
+    * $cleos_chainb push action bosibc.io   transfer [ hub.ibc <to> <quantity> <memo>] -p bosibc.io  // same as bellow
+    * $cleos_chainb push action eosio.token transfer [ hub.ibc <to> <quantity> <memo>] -p bosibc.io
+    *
+    *
+    * doing this is because the first action doesn't need the authority of hub.ibc, but the second one need it.
     */
    void token::transfer( name    from,
                          name    to,
@@ -550,24 +565,33 @@ namespace eosio {
       eosio_assert( is_account( to ), "to account does not exist");
       eosio_assert( from != to, "cannot transfer to self" );
       eosio_assert( memo.size() <= 512, "memo has more than 512 bytes" );
-      auto sym = quantity.symbol.code();
-      const auto& st = _stats.get( sym.raw(), "symbol(token) not registered");
-
       eosio_assert( quantity.is_valid(), "invalid quantity" );
       eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
-      eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+      auto sym = quantity.symbol.code();
 
-      /// --- ibc-hub related logic ---
-      #ifdef HUB
-      eosio_assert( hub_account != _self, "hub_account cannot be _self" );
-      if ( from != hub_account ){
+      bool transfered = false;
+
+      if ( false == _hubgs.is_open ){
          require_auth( from );
+         const auto& st = _stats.get( sym.raw(), "symbol(token) not registered");
+         eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
       } else {
-         ibc_transfer_from_hub( to, quantity, memo );
+         eosio_assert( _hubgs.hub_account != _self, "hub_account cannot be _self" );
+         if ( from != _hubgs.hub_account ){
+            require_auth( from );
+         }else {
+            eosio_assert( to == _self, "the to account of hub transfer must be _self");
+            ibc_transfer_from_hub( to, quantity, memo );
+
+            auto itr = _accepts.find(sym.raw());
+            if( itr != _accepts.end() && _stats.find(sym.raw()) == _stats.end() ) {
+               eosio_assert( quantity.symbol == itr->accept.symbol, "symbol precision mismatch" );
+               transfer_action_type action_data{ _self, to, quantity, memo };
+               action( permission_level{ _self, "active"_n }, itr->original_contract, "transfer"_n, action_data ).send();
+               transfered = true;
+            }
+         }
       }
-      #else
-      require_auth( from );
-      #endif
 
       /// --- ibc related logic ---
       if (  to == _self && memo.find("local") != 0 ) {   /// @tag 1: important 'to == _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
@@ -576,20 +600,23 @@ namespace eosio {
          auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
          eosio_assert( pch.active, "peer chain is not active");
 
-         if ( info.peerchain == st.peerchain_name ){
+         auto itr = _stats.find(sym.raw());
+         if ( itr != _stats.end() && info.peerchain == itr->peerchain_name ){
             withdraw( from, info.peerchain, info.receiver, quantity, info.notes );
          } else {
             transfer_notify( _self, from, _self, quantity, memo );
          }
       }
 
-      /// --- original logic ---
-      require_recipient( from );
-      require_recipient( to );
+      if ( transfered == false ) {
+         /// --- original logic ---
+         require_recipient( from );
+         require_recipient( to );
 
-      auto payer = has_auth( to ) ? to : from;
-      sub_balance( from, quantity );
-      add_balance( to, quantity, payer );
+         auto payer = has_auth( to ) ? to : from;
+         sub_balance( from, quantity );
+         add_balance( to, quantity, payer );
+      }
    }
 
    void token::withdraw( name from, name peerchain_name, name peerchain_receiver, asset quantity, string memo ) {
@@ -780,7 +807,7 @@ namespace eosio {
          const auto& st = get_currency_stats( sym.code() );
          eosio_assert( st.active, "not active");
          eosio_assert( st.peerchain_name == from_chain, "from_chain must equal to st.peerchain_name");
-         eosio_assert( st.peerchain_contract == actn.account, " action.account not correct");
+         eosio_assert( st.peerchain_contract == actn.account, "action.account not equal to st.peerchain_contract."); ///todo
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
          eosio_assert( quantity.amount > 0, "must issue positive quantity" );
@@ -810,6 +837,7 @@ namespace eosio {
       } else {  // withdraw accepted token to user
          const auto& acpt = get_currency_accept( quantity.symbol.code() );
          eosio_assert( acpt.active, "not active");
+         eosio_assert( pch.peerchain_ibc_token_contract == actn.account, "action.account not equal to pch.peerchain_ibc_token_contract.");
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
          eosio_assert( quantity.amount > 0, "must issue positive quantity" );
@@ -853,16 +881,19 @@ namespace eosio {
                               + to.to_string() + "(" + new_quantity.to_string() + ")"; */
             string new_memo = memo_info.notes;
             if ( new_memo.size() > 250 ) new_memo.resize( 250 );
-            transfer_action_type action_data{ _self, to, new_quantity, new_memo };
+
+            auto to_account = to;
+            if ( _hubgs.is_open && to == _hubgs.hub_account ){
+               to_account = _self;
+            }
+            transfer_action_type action_data{ _self, to_account, new_quantity, new_memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
       }
 
-      #ifdef HUB
-      if ( to == hub_account ){
+      if ( _hubgs.is_open && to == _hubgs.hub_account ){
          ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, quantity, memo_info.notes );
       }
-      #endif
 
       trim_cashtrxs_table_or_not( from_chain );
 
@@ -896,6 +927,9 @@ namespace eosio {
       transaction trx = unpack<transaction>( pkd_trx.packed_trx );
       eosio_assert( trx.actions.size() == 1, "cash transaction contains more then one action" );
 
+      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
+      eosio_assert( trx.actions.front().account == pch.peerchain_ibc_token_contract, "trx.actions.front().account == pch.peerchain_ibc_token_contract assert failed");
+
       // validate cash transaction id
       eosio_assert( std::memcmp(cash_trx_id.hash, pkd_trx.id().hash, 32) == 0, "cash_trx_id mismatch");
 
@@ -918,7 +952,6 @@ namespace eosio {
       verify_merkle_path( cash_trx_merkle_path, trx_receipt.digest());
 
       // --- validate with lwc ---
-      auto pch = _peerchains.get( from_chain.value, "from_chain not registered");
       eosio_assert( cash_trx_block_num <= anchor_block_num, "cash_trx_block_num <= anchor_block_num assert failed");
       if ( cash_trx_block_num < anchor_block_num ){
          block_header cash_trx_block_header = unpack<block_header>( cash_trx_block_header_data );
@@ -941,9 +974,16 @@ namespace eosio {
       /// if orignal trx is withdraw, burn those token
       auto memo_info = get_memo_info( src_trx_args.memo );
       bool ibc_withdraw = false;
-      auto itr = _stats.find( src_trx_args.quantity.symbol.code().raw() );
+      auto sym_code_raw = src_trx_args.quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
       if ( itr != _stats.end() && memo_info.peerchain == itr->peerchain_name ){
          ibc_withdraw = true;
+      }
+
+      if ( itr == _stats.end()){
+         auto acpt = _accepts.get( sym_code_raw );
+         auto account = src_trx.actions.front().account;
+         eosio_assert( account == _self || account == acpt.original_contract, "account == _self || account == acpt.original_contract assert failed");
       }
 
       if ( ibc_withdraw ){
@@ -957,11 +997,9 @@ namespace eosio {
          r.cash_seq_num += 1;
       });
 
-      #ifdef HUB
-      if ( src_trx_args.from == hub_account ){
+      if ( _hubgs.is_open && src_trx_args.from == _hubgs.hub_account ){
          delete_by_hub_trx_id( orig_trx_id );
       }
-      #endif
    }
 
    void token::rollback( name peerchain_name, const transaction_id_type trx_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM consume from being maliciously occupied
@@ -1024,9 +1062,9 @@ namespace eosio {
 
       _origtrxs.erase( _origtrxs.find(it->id) );
 
-      #ifdef HUB
-      rollback_hub_trx( trx_id );
-      #endif
+      if ( _hubgs.is_open ){
+         rollback_hub_trx( trx_id );
+      }
    }
 
    static const uint32_t min_distance = 3600 * 24 * 2;   // one day
@@ -1439,7 +1477,7 @@ namespace eosio {
       eosio_assert( value_str.size() == 64, "orig_trx_id value not valid");
       capi_checksum256 orig_trx_id = string_to_capi_checksum256( value_str );
 
-      /// 3. get recored
+      /// 3. get hubtrxs table recored
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"origtrxid"_n>();
       const auto& hub_trx_p = idx.find(fixed_bytes<32>(orig_trx_id.hash));
@@ -1481,8 +1519,8 @@ namespace eosio {
          name receiver = name(relayer);
          if ( is_account(receiver) ){
             asset fee{hub_trx_p->quantity.amount - quantity.amount, quantity.symbol};
-            sub_balance( hub_account, fee );
-            add_balance( receiver, fee, _self );
+            transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
+            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
       }
 

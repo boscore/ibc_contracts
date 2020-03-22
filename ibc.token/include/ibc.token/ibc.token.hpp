@@ -456,15 +456,15 @@ namespace eosio {
        * if you want to open it, uncomment the line '#define HUB' bellow,
        * and appoint one account to be the hub account by definition of macro: 'hub_account'
        */
-      #define HUB
 
-      #define hub_account "ibchub"_n
       #define max_hub_unfinished_trxs 1000
 
       struct [[eosio::table("hubgs")]] hub_globals {
          hub_globals(){}
+         bool                 is_open = false;
+         name                 hub_account;
          uint64_t             unfinished_trxs = 0;
-         EOSLIB_SERIALIZE( hub_globals, (unfinished_trxs))
+         EOSLIB_SERIALIZE( hub_globals, (is_open)(hub_account)(unfinished_trxs))
       };
       eosio::singleton< "hubgs"_n, hub_globals >   _hub_globals;
       hub_globals                                  _hubgs;
