@@ -4,6 +4,14 @@ This ibc.token contract can work in conjunction with multiple ibc.chain contract
 enabling users to manage assets on multiple peer chains with one ibc.token contract account.
 Therefore, the BOS IBC system can be used to elegantly construct multi sidechains cross-chain network.
 
+Contents
+--------
+ * [Actions called by normal users](#actions-called-by-normal-users)
+ * [Actions called by administrators](#actions-called-by-administrators)
+ * [Actions called by ibc_plugin](#actions-called-by-ibc_plugin)
+ * [Contract Design](#contract-design)
+ 
+ 
 Actions called by normal users
 ------------------------------
 #### transfer
