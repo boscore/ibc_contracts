@@ -142,11 +142,11 @@ Please refer to detailed content [Token_Registration_and_Management](./Token_Reg
 eos_admin=ibc3admin333
 
 $cleos_kylin push action ${contract_token} regacpttoken \
-    '["eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
+    '["eosio.token","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
     "1000000.0000 EOS",1000,"cryptokylin","https://www.cryptokylin.io","ibc3admin333","fixed","0.1000 EOS",0.01,"0.1000 EOS",true]' -p ${contract_token}
         
 $cleos_bos push action ${contract_token} regpegtoken \
-    '["kylin","eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
+    '["kylin","eosio.token","1000000000.0000 EOS","1.0000 EOS","100000.0000 EOS",
     "1000000.0000 EOS",1000,"ibc3admin333","0.1000 EOS",true]' -p ${contract_token} 
 ```
 
@@ -155,11 +155,11 @@ $cleos_bos push action ${contract_token} regpegtoken \
 bos_admin=ibc3admin333
 
 $cleos_bos push action ${contract_token} regacpttoken \
-    '["eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","100000.0000 BOS",
+    '["eosio.token","1000000000.0000 BOS","1.0000 BOS","100000.0000 BOS",
     "1000000.0000 BOS",1000,"bos organization","https://boscore.io","ibc3admin333","fixed","0.1000 BOS",0.01,"0.1000 BOS",true]' -p ${contract_token}
     
 $cleos_kylin push action ${contract_token} regpegtoken \
-    '["bostest","eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
+    '["bostest","eosio.token","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
     "1000000.0000 BOS",1000,"ibc3admin333","0.1000 BOS",true]' -p ${contract_token}
 ```
 

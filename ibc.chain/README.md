@@ -17,7 +17,7 @@ Actions called by the administrator
 #### forceinit( )
  - three table ( _chaindb, _prodsches, _sections ) will be clear.
  - this action is needed when repairing the ibc system manually, 
-   please refer to [TROUBLESHOOTING](../docs/TROUBLESHOOTING.md) for detailed IBC system recovery process.
+   please refer to [TROUBLESHOOTING](../docs/Troubles_Shooting.md) for detailed IBC system recovery process.
  - require auth of _self
 
 Actions called by ibc_plugin

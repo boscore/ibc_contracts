@@ -56,34 +56,34 @@ Token-related parameters that administrators can modify include:
   This amount shall be equal to or less than `max_supply` of the original token contract.
   The purpose of limiting the maximum acceptance quantity is to reduce the security risk.
 ```bash
-$ cleos push action bosibc.io setacptasset '["eosgoldtoken","max_accept","1000000000.0000 GOLD"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptasset '["GOLD","max_accept","1000000000.0000 GOLD"]' -p ${eos_admin}
 ```
 - Minimum amount of once forward transfer  
   Note: This quota must be larger than the transaction fee set by the IBC project side.
 ```bash
-$ cleos push action bosibc.io setacptasset '["eosgoldtoken","min_once_transfer","100.0000 GOLD"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptasset '["GOLD","min_once_transfer","100.0000 GOLD"]' -p ${eos_admin}
 ```
 - maximum once forward transfer  
 ```bash
-$ cleos push action bosibc.io setacptasset '["eosgoldtoken","max_once_transfer","1000000.0000 GOLD"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptasset '["GOLD","max_once_transfer","1000000.0000 GOLD"]' -p ${eos_admin}
 ```
 - maximum daily forward transfers  
 ```bash
-$ cleos push action bosibc.io setacptasset '["eosgoldtoken","max_daily_transfer","10000000.0000 GOLD"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptasset '["GOLD","max_daily_transfer","10000000.0000 GOLD"]' -p ${eos_admin}
 ```
 - project name  
 ```bash
-$ cleos push action bosibc.io setacptstr '["eosgoldtoken","organization","organization name"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptstr '["GOLD","organization","organization name"]' -p ${eos_admin}
 ```
 - project official website  
 ```bash
-$ cleos push action bosibc.io setacptstr '["eosgoldtoken","website","https://www.website.com"]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptstr '["GOLD","website","https://www.website.com"]' -p ${eos_admin}
 ```
 - initial active state  
   when acitve is false, the contract will not accept this token's forward transfer, 
   but will not affect the reverse withdrawal.
 ```bash
-$ cleos push action bosibc.io setacptstr '["eosgoldtoken","active",true]' -p ${eos_admin}
+$ cleos push action bosibc.io setacptstr '["GOLD","active",true]' -p ${eos_admin}
 ```
 
 *2. In the BOS mainnet `bosibc.io` contract (table:`stats`)*

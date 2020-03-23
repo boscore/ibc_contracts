@@ -87,8 +87,6 @@ void setchainbool( name peerchain_name, string which, bool value );
 #### regacpttoken
 ``` 
   void regacpttoken( name        original_contract,
-                     symbol      orig_token_symbol,
-                     symbol      peg_token_symbol,
                      asset       max_accept,
                      asset       min_once_transfer,
                      asset       max_once_transfer,
@@ -105,8 +103,6 @@ void setchainbool( name peerchain_name, string which, bool value );
 ```
 This action is used to register acceptable token.
  - **original_contract** account name of the token contract to be registered.
- - **orig_token_symbol** orignal token's symbol.
- - **peg_token_symbol** the peg token symbol on the peer chain's ibc.token contract, can be same with the original token symbol or not.
  - **max_accept** maximum amount of receivable assets.
  - **min_once_transfer** minimum amount of single transfer
  - **max_once_transfer** maximum amount of single transfer
@@ -123,20 +119,19 @@ This action is used to register acceptable token.
     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
  - require auth of _self
 
-Examples:  
-Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
-and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
+Note: from IBC version 4, the peg token symbol must same with the original token symbol.
+
 ``` 
 contract_token=ibc2token555
 run on EOS mainnet to register token EOS of eosio.token contract:
 $ cleos push action ${contract_token} regacpttoken \
-    '["eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOS","10.0000 EOS","5000.0000 EOS",
-    "100000.0000 EOS",1000,"eos organization","https://eos.io","ibc2token555","fixed","0.1000 EOS",0.01,"0.1000 EOS",true]' -p ${contract_token}
+    '["eosio.token","1000000000.0000 EOS","1.0000 EOS","10000.0000 EOS",
+    "1000000.0000 EOS",1000,"eos organization","https://eos.io","ibc2token555","fixed","0.1000 EOS",0.01,"0.1000 EOS",true]' -p ${contract_token}
     
 run on BOS mainnet to register token BOS of eosio.token contract:
 $ cleos push action ${contract_token} regacpttoken \
-    '["eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOS","10.0000 BOS","5000.0000 BOS",
-    "100000.0000 BOS",1000,"bos organization","https://boscore.io","ibc2token555","fixed","0.1000 BOS",0.01,"0.1000 BOS",true]' -p ${contract_token}
+    '["eosio.token","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
+    "1000000.0000 BOS",1000,"bos organization","https://boscore.io","ibc2token555","fixed","0.1000 BOS",0.01,"0.1000 BOS",true]' -p ${contract_token}
 ```
 
 #### setacptasset
@@ -144,7 +139,7 @@ $ cleos push action ${contract_token} regacpttoken \
 void setacptasset( symbol_code symcode, string which, asset quantity );
 ```
 Modify only one member of type `asset` in currency_accept struct.
- - **contract** the name of one registered acceptable token contract.
+ - **symcode** the token symbol code
  - **which** must be one of "max_accept", "min_once_transfer", "max_once_transfer", "max_daily_transfer".
  - **quantity** the assets' value to be set.
  - require auth of this token's administrator
@@ -154,7 +149,7 @@ Modify only one member of type `asset` in currency_accept struct.
   void setacptstr( symbol_code symcode, string which, string value );
 ```
 Modify only one member of type `string` in currency_accept struct.
- - **contract** the name of one registered acceptable token contract.
+ - **symcode** the token symbol code
  - **which** must be one of "organization", "website".
  - **value** the value to be set.
  - require auth of this token's administrator
@@ -164,7 +159,7 @@ Modify only one member of type `string` in currency_accept struct.
   void setacptint( symbol_code symcode, string which, uint64_t value );
 ```
 Modify only one member of type `int` in currency_accept struct.
- - **contract** the name of one registered acceptable token contract.
+ - **symcode** the token symbol code
  - **which** must be "max_tfs_per_minute".
  - **value** the value to be set.
  - require auth of _self
@@ -174,7 +169,7 @@ Modify only one member of type `int` in currency_accept struct.
   void setacptbool( symbol_code symcode, string which, bool value );
 ```
 Modify only one member of type `bool` in currency_accept struct.
- - **contract** the name of one registered acceptable token contract.
+ - **symcode** the token symbol code
  - **which** must be "active".
  - **value** the bool value to be set.
  - require auth of this token's administrator
@@ -188,7 +183,7 @@ Modify only one member of type `bool` in currency_accept struct.
                    double fee_ratio );
 ```
 Modify fee related members in currency_accept struct.
- - **contract** the name of one registered acceptable token contract.
+ - **symcode** the token symbol code
  - **kind** must be "success" or "failed".
  - **fee_mode** must be "fixed" or "ratio".
  - **fee_fixed** fixed fee quota, used when fee_mode == fixed
@@ -199,8 +194,6 @@ Modify fee related members in currency_accept struct.
 ```
   void regpegtoken( name        peerchain_name,
                     name        peerchain_contract,
-                    symbol      orig_token_symbol,
-                    symbol      peg_token_symbol,
                     asset       max_supply,
                     asset       min_once_withdraw,
                     asset       max_once_withdraw,
@@ -214,8 +207,6 @@ Modify fee related members in currency_accept struct.
 This action is used to register peg token.
  - **peerchain_name** the name of the chain where the original token was located.
  - **peerchain_contract** the peg token's original token contract name on it's original chain.
- - **orig_token_symbol** original token symbol.
- - **peg_token_symbol** the peg token's original token symbol on it's original chain
  - **max_supply** maximum supply
  - **min_once_withdraw** minimum amount of single withdraw
  - **max_once_withdraw** maximum amount of single withdraw
@@ -227,20 +218,17 @@ This action is used to register peg token.
      when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
  - require auth of _self
 
-Examples:  
-Suppose the EOS's peg token's symbol on BOS mainnet's ibc.token contract is EOSPG, 
-and the BOS's peg token's symbol on EOS mainnet's ibc.token contract is BOSPG.
 ``` 
 contract_token=ibc2token555
-run on EOS mainnet to register BOS's peg token, the peg token symbol is BOSPG:
+run on EOS mainnet to register BOS's peg token, the peg token symbol is BOS:
 $ cleos push action ${contract_token} regpegtoken \
-    '["bos","eosio.token","4,BOS","4,BOSPG","1000000000.0000 BOSPG","10.0000 BOSPG","5000.0000 BOSPG",
-    "100000.0000 BOSPG",1000,"ibc2token555","0.1000 BOSPG",true]' -p ${contract_token}
+    '["bos","eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
+    "1000000.0000 BOS",1000,"ibc2token555","0.1000 BOS",true]' -p ${contract_token}
 
-run on BOS mainnet to register EOS's peg token, the peg token symbol is EOSPG:
+run on BOS mainnet to register EOS's peg token, the peg token symbol is EOS:
 $ cleos push action ${contract_token} regpegtoken \
-    '["eos","eosio.token","4,EOS","4,EOSPG","1000000000.0000 EOSPG","10.0000 EOSPG","5000.0000 EOSPG",
-    "100000.0000 EOSPG",1000,"ibc2token555","0.1000 EOSPG",true]' -p ${contract_token}
+    '["eos","eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","10000.0000 EOS",
+    "1000000.0000 EOS",1000,"ibc2token555","0.1000 EOS",true]' -p ${contract_token}
 ```
 
 #### setpegasset
@@ -332,6 +320,13 @@ void unlockall();
    When the console prints "force initialization complete", it says that all three tables have been cleared.
  - require auth of _self
 
+#### hubinit
+```  
+    void hubinit( name hub_account );
+```
+ - **hub_account** the hub account. Just need this hub account to exist, no matter who has the authority, or who owns this account.
+ - open the `hub` feature of ibc.token contract.
+ - for more information of hub feature, please refer to [ibc_hub.md](../docs/IBC_Hub_Protocol.md).
 
 Actions called by ibc_plugin
 ----------------------------
