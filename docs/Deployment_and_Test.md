@@ -16,6 +16,16 @@ Notes:
 which is different with EOS mainnet's and Kylin or Jungle testnet's consensus algorithem 
 [pipeline-pbft](https://github.com/EOSIO/welcome/blob/master/docs/04_protocol/01_consensus_protocol.md#31-layer-1-native-consensus-abft).
 
+Contents
+--------
+ * [Build](#build)
+ * [Create Accounts](#create-accounts)
+ * [Configure and Start Relay Nodes](#configure-and-start-relay-nodes)
+ * [Deploy and Init IBC Contracts](#deploy-and-init-ibc-contracts)
+ * [Register Token](#register-token)
+ * [Send IBC Transactions](#send-ibc-transactions)
+
+
 ### Build
 - Build contracts  
   Please refer to [ibc_contracts](https://github.com/boscore/ibc_contracts).

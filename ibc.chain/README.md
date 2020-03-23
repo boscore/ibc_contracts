@@ -1,10 +1,20 @@
 ibc.chain
 ---------
-
 This contract implements eosio blockchain lightweight client, it is also called SPV client in [Bitcoin](https://bitcoin.org/bitcoin.pdf)
 combine with merkle path validation, this lightweight client can be used to verify transaction existence.
 
-Actions called by the administrator
+Contents
+--------
+ * [Actions called by administrators](#actions-called-by-administrators)
+ * [Actions called by ibc_plugin](#actions-called-by-ibc_plugin)
+ * [Relay management](#relay-management)
+ * [Resource requirement](#resource-requirement) 
+ * [Contract Design](#contract-design)
+ * [Functions](#functions)
+ * [Attack Dimensions and Security Scheme](#attack-dimensions-and-security-scheme)
+ 
+ 
+Actions called by administrator
 -------------------------------
 #### setglobal( chain_name, chain_id, consensus_algo )
  - **chain_name**, The name of the original blockchain of this light client, such as `eos`, `bos`.

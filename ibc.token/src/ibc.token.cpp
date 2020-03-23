@@ -1165,7 +1165,7 @@ namespace eosio {
       const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
       eosio_assert( from.balance.amount >= value.amount, "overdrawn balance" );
       auto payer = owner;
-      if ( payer == _hubgs.hub_account ){ payer = _self; }
+      if ( _hubgs.is_open && payer == _hubgs.hub_account ){ payer = _self; }
       from_acnts.modify( from, payer, [&]( auto& a ) {
          a.balance -= value;
       });
@@ -1176,7 +1176,7 @@ namespace eosio {
       accounts to_acnts( _self, owner.value );
       auto to = to_acnts.find( value.symbol.code().raw() );
       if( to == to_acnts.end() ) {
-         if ( ram_payer == _hubgs.hub_account ){ ram_payer = _self; }
+         if ( _hubgs.is_open && ram_payer == _hubgs.hub_account ){ ram_payer = _self; }
          to_acnts.emplace( ram_payer, [&]( auto& a ){
             a.balance = value;
          });

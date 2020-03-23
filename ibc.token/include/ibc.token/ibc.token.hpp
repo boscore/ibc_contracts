@@ -203,8 +203,9 @@ namespace eosio {
 
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
-
+#ifdef HUB
       [[eosio::action]]
+#endif
       void hubinit( name hub_account );
 
       // inline action
