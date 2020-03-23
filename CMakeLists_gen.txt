@@ -29,6 +29,8 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+HUB_PROTOCOL_SWITCH
+
 add_subdirectory(ibc.chain)
 add_subdirectory(ibc.token)
 
