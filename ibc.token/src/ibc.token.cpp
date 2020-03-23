@@ -586,8 +586,6 @@ namespace eosio {
             auto itr = _accepts.find(sym.raw());
             if( itr != _accepts.end() && _stats.find(sym.raw()) == _stats.end() ) {
                eosio_assert( quantity.symbol == itr->accept.symbol, "symbol precision mismatch" );
-               transfer_action_type action_data{ _self, to, quantity, memo };
-               action( permission_level{ _self, "active"_n }, itr->original_contract, "transfer"_n, action_data ).send();
                transfered = true;
             }
          }
@@ -807,7 +805,8 @@ namespace eosio {
          const auto& st = get_currency_stats( sym.code() );
          eosio_assert( st.active, "not active");
          eosio_assert( st.peerchain_name == from_chain, "from_chain must equal to st.peerchain_name");
-         eosio_assert( st.peerchain_contract == actn.account, "action.account not equal to st.peerchain_contract."); ///todo
+         eosio_assert( actn.account == st.peerchain_contract || actn.account == pch.peerchain_ibc_token_contract,
+               "action.account not equal to st.peerchain_contract or pch.peerchain_ibc_token_contract.");
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
          eosio_assert( quantity.amount > 0, "must issue positive quantity" );
