@@ -17,7 +17,6 @@ if your host is installed bos.cdt, compile with the following command
 $ ./build.sh bos.cdt
 ```
 
-
 ### IBC related softwares' version description
 
 There are three IBC related softwares, [ibc_contracts](https://github.com/boscore/ibc_contracts),
@@ -39,14 +38,14 @@ compatible combination:
 you can find all the details related to IBC system deployment, contracts initialization, 
 testing inter-blockchain token transfers in the bash scripts.
 
-### Relevant documents
+### Documents
  - [User_Guide](./docs/User_Guide.md) 
    Explains how blockchain users use IBC system for inter-blockchain token transfer by command lines.
  - [Token_Registration_and_Management](./docs/Token_Registration_and_Management.md) 
    Explains how to register a `token` in the IBC contracts to circulate on the two blockchains.
  - [Deployment_and_Test](./docs/Deployment_and_Test.md) Explains how to deploy and test the IBC system.
  - [IBC_Hub_Protocol](./docs/IBC_Hub_Protocol.md) Explains the hub protocol, and how to use it.
- - [Troubleshooting](docs/Troubles_Shooting.md) Explains how to troubleshooting when IBC system encounters problems.
+ - [Trouble_Shooting](docs/Troubles_Shooting.md) Explains how to troubleshooting when IBC system encounters problems.
  - [EOSIO_IBC_Priciple_and_Design](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design.md)
  - [EOSIO_IBC_Priciple_and_Design 中文版](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design_zh.md)
  

@@ -1448,6 +1448,8 @@ namespace eosio {
          r.fee_receiver       = name();
          r.hub_trx_id         = capi_checksum256();
          r.hub_trx_time_slot  = 0;
+         r.forward_times      = 0;
+         r.backward_times     = 0;
       });
 
       /// check max unfinished hub trxs
@@ -1508,10 +1510,12 @@ namespace eosio {
 
       if ( memo_info.peerchain == hub_trx_p->to_chain ) {
          eosio_assert( memo_info.receiver == hub_trx_p->to_account, "hub trx must transfer to it's dest account");
+         _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) { r.forward_times += 1; });
       } else if ( memo_info.peerchain == hub_trx_p->from_chain ) {
          eosio_assert( memo_info.receiver == hub_trx_p->from_account, "hub trx must transfer to it's original account");
          auto slot = get_block_time_slot();
          eosio_assert( slot - hub_trx_p->cash_time_slot > 240, "you can't transfer hub trx back to it's original chain within two minutes");
+         _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) { r.backward_times += 1; });
       } else {
          eosio_assert(false, "hub trx must transfer to it's dest chain or original chain");
       }
@@ -1579,6 +1583,7 @@ namespace eosio {
    }
 
    void token::hubinit( name hub_account ){
+      require_auth( _self );
       eosio_assert( _hubgs.is_open == false, "already init");
       _hubgs.is_open = true;
       _hubgs.hub_account = hub_account;

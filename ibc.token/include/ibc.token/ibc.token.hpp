@@ -475,14 +475,16 @@ namespace eosio {
          name                  from_chain;
          name                  from_account;
          asset                 from_quantity;
-         asset                 mini_to_quantity;
+         asset                 mini_to_quantity; /// minimum transfer amount
          capi_checksum256      orig_trx_id;
          name                  to_chain;
          name                  to_account;
-         asset                 to_quantity; /// minimum amount, note, this is not the original amount
+         asset                 to_quantity;
          name                  fee_receiver;
          capi_checksum256      hub_trx_id;
          uint64_t              hub_trx_time_slot;
+         uint8_t               forward_times;
+         uint8_t               backward_times;
 
          uint64_t primary_key()const { return cash_seq_num; }
          fixed_bytes<32> by_orig_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
