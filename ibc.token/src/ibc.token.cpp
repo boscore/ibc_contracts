@@ -882,12 +882,14 @@ namespace eosio {
             string new_memo = memo_info.notes;
             if ( new_memo.size() > 250 ) new_memo.resize( 250 );
 
-            auto to_account = to;
-            if ( _hubgs.is_open && to == _hubgs.hub_account ){
-               to_account = _self;
+            bool jump = false;
+            if ( _hubgs.is_open && to == _hubgs.hub_account && acpt.original_contract != _self ){
+               jump = true;
             }
-            transfer_action_type action_data{ _self, to_account, new_quantity, new_memo };
-            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+            if ( ! jump ){
+               transfer_action_type action_data{ _self, to, new_quantity, new_memo };
+               action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+            }
          }
       }
 
@@ -1163,8 +1165,9 @@ namespace eosio {
 
       const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
       eosio_assert( from.balance.amount >= value.amount, "overdrawn balance" );
-
-      from_acnts.modify( from, owner, [&]( auto& a ) {
+      auto payer = owner;
+      if ( payer == _hubgs.hub_account ){ payer = _self; }
+      from_acnts.modify( from, payer, [&]( auto& a ) {
          a.balance -= value;
       });
    }
@@ -1174,6 +1177,7 @@ namespace eosio {
       accounts to_acnts( _self, owner.value );
       auto to = to_acnts.find( value.symbol.code().raw() );
       if( to == to_acnts.end() ) {
+         if ( ram_payer == _hubgs.hub_account ){ ram_payer = _self; }
          to_acnts.emplace( ram_payer, [&]( auto& a ){
             a.balance = value;
          });
@@ -1404,8 +1408,8 @@ namespace eosio {
       /// parse memo string
       string tmp_memo = memo;
       trim( tmp_memo );
-      eosio_assert( memo.find("<< ") == 0, error_info.c_str() );
-      tmp_memo = tmp_memo.substr(3);
+      eosio_assert( tmp_memo.find(">>") == 0, error_info.c_str() );
+      tmp_memo = tmp_memo.substr(2);
       trim( tmp_memo );
       auto memo_info = get_memo_info( tmp_memo );
 
