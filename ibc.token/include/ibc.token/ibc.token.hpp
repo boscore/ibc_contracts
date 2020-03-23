@@ -472,6 +472,7 @@ namespace eosio {
          name                  from_chain;
          name                  from_account;
          asset                 from_quantity;
+         asset                 mini_to_quantity;
          capi_checksum256      orig_trx_id;
          name                  to_chain;
          name                  to_account;

@@ -1419,6 +1419,19 @@ namespace eosio {
       auto pch = _peerchains.get( memo_info.peerchain.value, "dest chain has not registered");
       eosio_assert(pch.active, "dest chain is not active");
 
+      /// --- get mini_to_quantity ---
+      const auto& acpt = get_currency_accept( quantity.symbol.code() );
+      eosio_assert( acpt.active, "not active");
+
+      int64_t diff = 0;
+      if ( acpt.service_fee_mode == "fixed"_n ){
+         diff = acpt.service_fee_fixed.amount;
+      } else {
+         diff = int64_t( quantity.amount * acpt.service_fee_ratio );
+      }
+      eosio_assert( diff >= 0 && diff < quantity.amount, "diff >= 0 && diff < quantity.amount assert failed");
+      asset mini_to_quantity{quantity.amount - diff, quantity.symbol};
+
       /// record to hub table
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       _hubtrxs.emplace( _self, [&]( auto& r ) {
@@ -1427,6 +1440,7 @@ namespace eosio {
          r.from_chain         = from_chain;
          r.from_account       = from_account;
          r.from_quantity      = quantity;
+         r.mini_to_quantity   = mini_to_quantity;
          r.orig_trx_id        = orig_trx_id;
          r.to_chain           = memo_info.peerchain ;
          r.to_account         = memo_info.receiver;
@@ -1503,34 +1517,21 @@ namespace eosio {
       }
 
       /// --- check quantity ---
-      const auto& acpt = get_currency_accept( quantity.symbol.code() );
-      eosio_assert( acpt.active, "not active");
-
-      int64_t diff = 0;
-      if ( acpt.service_fee_mode == "fixed"_n ){
-         diff = acpt.service_fee_fixed.amount;
-      } else {
-         diff = int64_t( quantity.amount * acpt.service_fee_ratio );
-      }
-
       eosio_assert(quantity.symbol == hub_trx_p->from_quantity.symbol, "quantity.symbol == hub_trx_p->from_quantity.symbol assert failed");
-      eosio_assert(hub_trx_p->from_quantity.amount >= quantity.amount, "hub_trx_p->from_quantity.amount >= quantity.amount assert failed");
-      eosio_assert(hub_trx_p->from_quantity.amount > diff, "hub_trx_p->from_quantity.amount > diff assert failed");
-      eosio_assert(quantity.amount >= hub_trx_p->from_quantity.amount - diff, "quantity.amount >= hub_trx_p->from_quantity.amount - diff assert failed");
+      eosio_assert(hub_trx_p->from_quantity >= quantity && quantity >= hub_trx_p->mini_to_quantity, "quantity must in range [from_quantity,mini_to_quantity]");
 
       /// transfer fee to receiver
       string relayer = get_value_str_by_key_str( memo, "relayer");
+      name receiver = name();
       if ( relayer.size() ){
-         name receiver = name(relayer);
+         receiver = name(relayer);
          eosio_assert(is_account(receiver), "relayer account does not exist");
-         _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
-            r.fee_receiver = receiver;
-         });
       }
 
       /// recored to hubtrxs table
       _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
          r.to_quantity        = quantity;
+         r.fee_receiver       = receiver;
          r.hub_trx_id         = get_trx_id();
          r.hub_trx_time_slot  = get_block_time_slot();
       });
