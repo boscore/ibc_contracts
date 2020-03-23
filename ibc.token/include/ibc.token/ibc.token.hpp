@@ -203,14 +203,14 @@ namespace eosio {
 
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
+
 #ifdef HUB
       [[eosio::action]]
-#endif
       void hubinit( name hub_account );
 
       // inline action
       void feetransfer( name from, name to, asset quantity, string memo );
-
+#endif
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {
          stats statstable( token_contract_account, token_contract_account.value );
@@ -453,7 +453,7 @@ namespace eosio {
       void add_balance( name owner, asset value, name ram_payer );
       void verify_merkle_path( const std::vector<capi_checksum256>& merkle_path, digest_type check );
 
-
+#ifdef HUB
       /**
        *  ibc-hub related macros, structs and functions
        */
@@ -505,6 +505,7 @@ namespace eosio {
       void ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo );
       void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
       void rollback_hub_trx( const transaction_id_type& hub_trx_id );   // when ibc transmit fails
+#endif
    };
 
 } /// namespace eosio
