@@ -1522,11 +1522,10 @@ namespace eosio {
       string relayer = get_value_str_by_key_str( memo, "relayer");
       if ( relayer.size() ){
          name receiver = name(relayer);
-         if ( is_account(receiver) ){
-            _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
-               r.fee_receiver = receiver;
-            });
-         }
+         eosio_assert(is_account(receiver), "relayer account does not exist");
+         _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+            r.fee_receiver = receiver;
+         });
       }
 
       /// recored to hubtrxs table
