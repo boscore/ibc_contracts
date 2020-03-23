@@ -1564,8 +1564,13 @@ namespace eosio {
       auto fee = hub_trx_p->from_quantity - hub_trx_p->to_quantity;
       auto receiver = hub_trx_p->fee_receiver;
       if ( receiver != name() && is_account(receiver) && fee.amount > 0 ){
+         if ( acpt.original_contract == _self ){
+            transfer_action_type action_data{ _hubgs.hub_account, receiver, fee, "hub trx fee"};
+            action( permission_level{ _self, "active"_n }, _self, "feetransfer"_n, action_data ).send();
+         } else {
             transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+         }
       }
 
       /// delete
@@ -1579,6 +1584,13 @@ namespace eosio {
       _hubgs.hub_account = hub_account;
    }
 
+   void token::feetransfer( name from, name to, asset quantity, string memo ){
+      require_auth( _self );
+      eosio_assert( from == _hubgs.hub_account, "from == _hubgs.hub_account assert failed");
+      sub_balance( _hubgs.hub_account, quantity );
+      add_balance( to, quantity, _self );
+   }
+
 } /// namespace eosio
 
 extern "C" {
@@ -1589,7 +1601,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)(hubinit))
+            (lockall)(unlockall)(forceinit)(open)(close)(hubinit)(feetransfer))
          }
          return;
       }

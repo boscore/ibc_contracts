@@ -207,6 +207,9 @@ namespace eosio {
       [[eosio::action]]
       void hubinit( name hub_account );
 
+      // inline action
+      void feetransfer( name from, name to, asset quantity, string memo );
+
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {
          stats statstable( token_contract_account, token_contract_account.value );
