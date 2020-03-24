@@ -12,13 +12,18 @@ which are chain_a, chain_b, chain_c and chain_d, among them, chain_a is the hub 
 
 Contents
 --------
- * []()
- * []()
- * []()
- * []()
- * []()
- * []()
- * []()
+ * [Information about each chain](#information-about-each-chain)
+ * [Multi Chain IBC architecture](#multi-chain-ibc-architecture)
+ * [Noun definition](#noun-definition)
+ * [Shell variables definition](#shell-variables-definition)
+ * [Compile/deploy/initialize](#compile--deploy--initialize)
+ * [Token Registration](#token-registration)
+ * [Only use ibc protocol](#only-use-ibc-protocol)
+ * [HUB Protocol - User Protocol](#hub-protocol---user-protocol)
+ * [HUB Protocol - Relay Protocol](#hub-protocol---relay-protocol)
+ * [Complete examples](#complete-examples)
+ * [Safety](#safety)
+ * [Internal special protocol](#internal-special-protocol)
 
   
 Information about each chain
@@ -28,8 +33,8 @@ Information about each chain
 |                    |   chain_a   |   chain_b   |   chain_c   |   chain_d   |               |
 |--------------------|-------------|-------------|-------------|-------------|---------------|
 |    property        |    value    |    value    |    value    |    value    |     remark    |
-|system token symbol |     TOA     |     TOA     |     TOA     |     TOA     |eosio.token    |
-|chain short name    |     cha     |     cha     |     cha     |     cha     |used in transfer action's memo string|
+|system token symbol |     TOA     |     TOB     |     TOC     |     TOD     |eosio.token    |
+|chain short name    |     cha     |     chb     |     chc     |     chd     |used in transfer action's memo string|
 |ibc.token account   |    ibc.io   |    ibc.io   |    ibc.io   |    ibc.io   |deploy ibc.token contract|
 |hub account         |    hub.io   |      -      |      -      |      -      |only the hub-chain need|
 
