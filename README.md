@@ -1,6 +1,12 @@
 ibc_contracts
 -------------
 
+<p align="center">
+  <img src="./docs/hub.svg">
+</p>
+
+
+
 ![](./docs/hub.svg)
 
 
