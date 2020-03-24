@@ -1,7 +1,7 @@
 ibc_contracts
 -------------
 
-![](./docs/hub.png)
+![](./docs/hub.svg)
 
 
 starting from version 4, ibc_contracts supports the hub protocol, through this protocol, 

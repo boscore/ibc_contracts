@@ -37,7 +37,7 @@ Information about each chain
 Multi Chain IBC architecture
 ----------------------------
 
-![](./hub.png)
+![](./hub.svg)
 
 
 Noun definition
