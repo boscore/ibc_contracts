@@ -552,16 +552,17 @@ namespace eosio {
     * To support ibc-hub feature, a new transfer()->cash()->cashconfirm() protocol must be added.
     * for one token which is originally issued on the hub-chain in one contract.
     * let's assume:
-    *   there are three blockchain:chaina chainb and chainc, and chainb be the hub chain
-    *   one token of chainb is registered to use ibc-hub, the token contract is 'eosio.token' and symbol is 'TOB'
-    *   the ibc.token contract on chainb is 'bosibc.io', and the hub account is 'hub.ibc'
+    *   there are three blockchain:chaina chainb and chainc, and chaina be the hub chain
+    *   one token of chaina is registered to use ibc-hub, the token contract is 'eosio.token' and symbol is 'TOA'
+    *   the ibc.token contract on chaina is 'bosibc.io', and the hub account is 'hub.io'
     * the new protocol must accept the following two transfer action be the same.
     *
-    * $cleos_chainb push action bosibc.io   transfer [ hub.ibc <to> <quantity> <memo>] -p bosibc.io  // same as bellow
-    * $cleos_chainb push action eosio.token transfer [ hub.ibc <to> <quantity> <memo>] -p bosibc.io
+    * $cleos_a push action bosibc.io   transfer [ hub.io <to> <quantity> <memo>] -p <any account's authority>
+    * $cleos_a push action eosio.token transfer [ hub.io <to> <quantity> <memo>] -p hub.io
     *
     *
-    * doing this is because the first action doesn't need the authority of hub.ibc, but the second one need it.
+    * doing this is because the first action doesn't need the authority of hub.io, but the second one need it,
+    * this will allown any one can push the second stage of a hub transaction.
     */
    void token::transfer( name    from,
                          name    to,
@@ -834,12 +835,8 @@ namespace eosio {
 
          add_balance( _self, new_quantity, _self );
          if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
-            if ( memo_info.notes.size() > 256 ) memo_info.notes.resize( 256 );
-            /* string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
-                              + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-issue--> thischain "
-                              + to.to_string() + "(" + new_quantity.to_string() + ")"; */
-            string new_memo = memo_info.notes;
-            transfer_action_type action_data{ _self, to, new_quantity, new_memo };
+            if ( memo_info.notes.size() > 250 ) memo_info.notes.resize( 250 );
+            transfer_action_type action_data{ _self, to, new_quantity, memo_info.notes };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
 
@@ -885,23 +882,14 @@ namespace eosio {
          });
 
          if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
-            if ( memo_info.notes.size() > 70 ) memo_info.notes.resize( 70 );
-            /* string new_memo = memo_info.notes + " | from peerchain trx_id:" + capi_checksum256_to_string(orig_trx_id) + " "
-                              + args.from.to_string() + "(" + quantity.to_string() + ") --ibc-withdraw--> thischain "
-                              + to.to_string() + "(" + new_quantity.to_string() + ")"; */
-            string new_memo = memo_info.notes;
-            if ( new_memo.size() > 250 ) new_memo.resize( 250 );
-
             bool jump = false;
-
             #ifdef HUB
-            if ( _hubgs.is_open && to == _hubgs.hub_account && acpt.original_contract != _self ){
-               jump = true;
-            }
+            if ( _hubgs.is_open && to == _hubgs.hub_account && acpt.original_contract != _self ){ jump = true; }
             #endif
 
             if ( ! jump ){
-               transfer_action_type action_data{ _self, to, new_quantity, new_memo };
+               if ( memo_info.notes.size() > 250 ) memo_info.notes.resize( 250 );
+               transfer_action_type action_data{ _self, to, new_quantity, memo_info.notes };
                action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
             }
          }
