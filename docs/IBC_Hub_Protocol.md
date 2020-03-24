@@ -42,7 +42,9 @@ Information about each chain
 Multi Chain IBC architecture
 ----------------------------
 
-![](./hub.svg)
+<p align="center">
+  <img src="./hub.svg">
+</p>
 
 
 Noun definition

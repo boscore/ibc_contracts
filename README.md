@@ -5,11 +5,6 @@ ibc_contracts
   <img src="./docs/hub.svg">
 </p>
 
-
-
-![](./docs/hub.svg)
-
-
 starting from version 4, ibc_contracts supports the hub protocol, through this protocol, 
 a star shaped inter-blockchain communication network can be formed, with one hub chain and multiple sister chains. 
 You can transfer a token on a sister chain to another sister chain with only one transfer, 
