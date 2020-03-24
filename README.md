@@ -1,20 +1,28 @@
 ibc_contracts
 -------------
 
+![](./docs/hub.png)
+starting from version 4, ibc_contracts supports the hub protocol, through this protocol, 
+a star shaped inter-blockchain communication network can be formed, with one hub chain and multiple sister chains. 
+You can transfer a token on a sister chain to another sister chain with only one transfer, 
+for more detailed information, please refer to [IBC_Hub_Protocol.md](./docs/IBC_Hub_Protocol.md)
+
+
 ### Build
 The two contracts are developed entirely on eosio.cdt, so you can compile them with eosio.cdt. 
 Also, you can compile them with bos.cdt, for bos.cdt only adds some contract interfaces, 
 the existing interfaces of eosio.cdt have not been changed. 
 However, eosio.cdt and bos.cdt use different version number, so you should use following commands to compile:  
 
-if your host is installed eosio.cdt, compile with the following command  
 ```
-$ ./build.sh eosio.cdt
+$ ./build.sh eosio.cdt  # compile with eosio.cdt
+$ ./build.sh bos.cdt    # compile with bos.cdt
 ```
 
-if your host is installed bos.cdt, compile with the following command  
+If the target chain of the deployment contract is a hub chain, you need to compile with the hub protocol.
 ```
-$ ./build.sh bos.cdt
+$ ./build.sh eosio.cdt HUB_PROTOCOL=ON
+$ ./build.sh bos.cdt HUB_PROTOCOL=ON
 ```
 
 ### IBC related softwares' version description
