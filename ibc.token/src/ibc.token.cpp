@@ -428,7 +428,7 @@ namespace eosio {
       trim( memo );
 
       // --- get chain name and notes ---
-      pos = memo.find(" ");
+      pos = memo.find_first_not_of("abcdefghijklmnopqrstuvwxyz");
       if ( pos == std::string::npos ){
          info.peerchain = name( memo );
          info.notes = "";
@@ -1495,7 +1495,7 @@ namespace eosio {
    }
 
    const string error_info2 = "for the transfer action from the hub accout,it's memo string format "
-                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [relayer=account] [optional user defined string]";
+                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [relay=account] [optional user defined string]";
 
    void token::ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo  ){
       /// --- check to ---
@@ -1539,11 +1539,11 @@ namespace eosio {
       eosio_assert(hub_trx_p->from_quantity >= quantity && quantity >= hub_trx_p->mini_to_quantity, "quantity must in range [from_quantity,mini_to_quantity]");
 
       /// transfer fee to receiver
-      string relayer = get_value_str_by_key_str( memo, "relayer");
+      string relay = get_value_str_by_key_str( memo, "relay");
       name receiver = name();
-      if ( relayer.size() ){
-         receiver = name(relayer);
-         eosio_assert(is_account(receiver), "relayer account does not exist");
+      if ( relay.size() ){
+         receiver = name(relay);
+         eosio_assert(is_account(receiver), "relay account does not exist");
       }
 
       /// recored to hubtrxs table

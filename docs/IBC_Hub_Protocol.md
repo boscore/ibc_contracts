@@ -149,34 +149,145 @@ $cleos_c push action ${contract_token} regpegtoken \
 token TOB can use the hub protocol only if it is registered in the table 'accept' of the hub chain, 
 and can only transfer TOB successfully to the sister chains that have registered TOB as pegtoken.
 
-User Protocol
--------------
+Only use ibc protocol
+---------------------
 Let's say that you have a token TOX on sister chain B (*this token can be any native token of sister chains or the hub chain*), 
-and you want to transfer it to sister chain C, you have two options:
+and you want to transfer it to sister chain C, you have two options 1) not use the hub protocol, 2) use the hub protocol.
+if you don't use the hub protocol,this requires that you have an account of your own on the hub chain (for example, chaina2acnt1), 
+you need to transfer the token to chaina2acnt1 on chain_a through the IBC protocol first, 
+and then transfer the token on chaina2acnt1 of chain_a to destination account on chain_c through the IBC protocol. 
+In the whole process, users need to perform two operations, one on chain_b and one on chain_a.
 
-1. not use the hub protocol.   
-  This requires that you have an account of your own on the hub chain (for example, chaina2acnt1), 
-  you need to transfer the token to chaina2acnt1 on chain_a through the IBC protocol first, 
-  and then transfer the token on chaina2acnt1 of chain_a to destination account on chain_c through the IBC protocol. 
-  In the whole process, users need to perform two operations, one on chain_b and one on chain_a.
+Suppose you want transfer 100.0000 TOB from chain_b's account chainb2acnt1 to chain_c's account chainc2acnt1.
+```shell
+# --- transfer TOB from chain_b to chain_a ---
+$cleos_b push action -f eosio.token  transfer '["chainb2acnt1","ibc2token555","100.0000 TOB" "chaina2acnt1@cha additional string"]' -p chainb2acnt1
 
-    Suppose you want transfer 100.0000 TOB from chain_b's account chainb2acnt1 to chain_c's account chainc2acnt1.
-    ```shell
-    # --- transfer TOB from chain_b to chain_a ---
-    $cleos_b push action -f eosio.token  transfer '["chainb2acnt1","ibc2token555","100.0000 TOB" "chaina2acnt1@cha additional string"]' -p chainb2acnt1
-    
-    # --- transfer TOB from chain_a to chain_c ---
-    $cleos_a push action -f ${contract_token} transfer '["chaina2acnt1","ibc2token555","100.0000 TOB" "chainc2acnt1@chc additional string"]' -p chaina2acnt1
-    ```
+# --- transfer TOB from chain_a to chain_c ---
+$cleos_a push action -f ${contract_token} transfer '["chaina2acnt1","ibc2token555","100.0000 TOB" "chainc2acnt1@chc additional string"]' -p chaina2acnt1
+```
+
+HUB Protocol - User Protocol
+----------------------------
+Only token transfers between sister chains need the hub protocol, the advantages of using hub protocol are 
+1) users can transfer token from one sister chain to another sister chain without having an account on the hub chain, 
+2）users only need to operate on the initial sister chain once, and the subsequent operation is completed by the trustless relay program automatically.
+
+protocol definition:
+```shell
+cleos_s='cleos -u <end point of one sister chain>'
+$cleos_s push action ${contract} transfer [from ${ibc_token_contract} quantity 
+         ”${hub_account}@c{hub_chain_short_name} >> ${dest_account}@${dest_chain_short_name} <additional string> ] -p from
+```
+ - **${contract}**  
+Among them, ${contract} is the originally issued contract of the token to be transferred, 
+and ${contract} can be ${ibc_token_contract} itself if the token is a pegtoken, 
+or other token contracts if the token is originally issued on this sister chain.
+
+ - **${ibc_token_contract}**  
+the account that deployed ibc.token contract.
+
+ - **${hub_account}**  
+the hub account on hub chain.
+
+ - **${hub_chain_short_name}**  
+hub chain's short name, such as "cha".
+
+ - **${dest_account}**  
+destination account.
+
+ - **${dest_chain_short_name}**  
+destination chain short name, such as "chc".
+
+Example:
+Suppose you want to transfer 100.0000 TOB on chain_b account chainb2acnt1 to chain_c account chainc2acnt1.
+```shell
+$cleos_b push action eosio.token transfer "[chainb2acnt1, ibc.io, '100.0000 TOB' 'hub.io@cha >> chainc2acnt1@chc additional string']" -p chainb2acnt1
+```
+
+#### Special symbol description
+The `@` `>>` and `=` symbols can have spaces at both sides, but they are not required, so the following two memo strings are equivalent
+```shell
+"hub.io @ cha >> chainc2acnt1@  chc key1=value1 key2 = value2 additional string"
+"hub.io@cha>>chainc2acnt1@chc key1=value1 key2=value2 additional string"
+```
+
+HUB Protocol - Relay Protocol
+-----------------------------
+The whole hub protocol is divided into two phases. The first phase is the user protocol, which is triggered by the user, 
+the second phase is the relay protocol, which can be triggered by anyone with any account's authoriy. 
+(we added related logic in [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos),
+ which can automatically complete the second phase of hub protocol).
+
+When users transfer tokens from one sister chain to another through the hub protocol, 
+these tokens will first be transferred to the hub account of the hub chain 
+(if the original chain of the token is hub chain, it will be transferred to the IBC. Token contract account of the hub chain), 
+and then a relay is needed to transfer these tokens to the target sisterchain. 
+When a hub TRX completes the first stage, within two minutes, 
+relay can only transfer the token that stays on the hub account to the destination account of the destination chain. 
+After more than two minutes, relay can transfer the token that stays on the hub account to the original account of the original chain.
+
+protocol definition:
+```shell
+cleos_h='cleos -u <end point of hub chain>'
+$cleos_h push action ${ibc_token_contract} transfer "[${hub_account}, ${ibc_token_contract},${quantity},
+    "${dest_account}@${dest_chain_short_name} orig_trx_id=${orig_trx_id} relay=${relay} addtional string"]" -p ${any authority}
+```
+
+ - **${ibc_token_contract}**  
+   the account that deployed ibc.token contract.
+   
+ - **${hub_account}**  
+   the hub account
+   
+ - **${quantity}**  
+   In hub chain's ibc.token contract‘s table `hubtrx`, the maximum and minimum values of quantity are recorded, 
+   so the quantity value here must be within this range, and transaction fee equal to maximum minus quantity, 
+   and will transfer to the ${relay} if it's appointed in the memo string by relay=${relay}.
+   
+ - **${dest_account}**  
+   destination account.
+   
+ - **${dest_chain_short_name}**  
+   destination chain short name, such as "chc".
+   
+ - **${orig_trx_id}**  
+   In hub chain's ibc.token contract‘s table `hubtrx`, the original transaction id is recored, the value muse equal
+   to the record.
+   
+ - **${relay}**  
+   Any existing account can be specified. When the hub-trx is completed, the transaction fee will be transferred to the account.
+   
+ - **${any authority}**  
+   you can appoint it to any account of which you have its authority
+
+We still use the scenario described in the previous section, so relay completes the operation as follows:
+
+```shell
+$cleos_a push action ibc2token555  transfer '["hub.io","ibc2token555","99.9000 TOB"
+"chainc2acnt1@chc orig_trx_id=151b40701f48f4d0df0a924de8ab046340f8b6f8f68d5f7edeed04835bd5aae3 relayer=chaina2acnt2  notes infomation"]' -p myaccount
+```
+
+Complete examples
+-----------------
+
+please refer to [ibc_test_env/task_ibc_test_v4.sh](https://github.com/boscore/ibc_test_env/blob/master/task_ibc_test_v4.sh) 
+for a complete test case.
 
 
+Safety
+------
+Security is the premise. The hub protocol is based on the IBC protocol,
+ and the hub protocol can prevent the double-spend attack, and the holder of the hub account can't do evil.
 
+Internal special protocol
+-------------------------
+In order to allow the native token of hub chain (take TOA as an example) to use the hub protocol, 
+that is, you can directly transfer TOA from one sister chain to another sister chain through the hub protocol, 
+which requires sister chains to accept that the following two actions on the hub chain are equivalent,
+only in this way can anyone be allowed to execute the second phase of the hub protocol
 
-
-
-
-
-
-
-
-
+```shell
+$cleos_a push action eosio.token transfer [ hub.ibc <to> '1.0000 TOA' <memo>] -p bosibc.io
+$cleos_a push action bosibc.io   transfer [ hub.ibc <to> '1.0000 TOA' <memo>] -p bosibc.io
+```
