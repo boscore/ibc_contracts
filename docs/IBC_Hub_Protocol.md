@@ -276,7 +276,7 @@ $cleos_h push action ${ibc_token_contract} transfer "[${hub_account}, ${ibc_toke
    In hub chain's ibc.token contract‘s table `hubtrx`, the original transaction id is recored, the value muse equal
    to the record.
    
- - **${worker}**  
+ - **${worker}**  [optional]  
    Any existing account can be specified. When the hub-trx is completed, the transaction fee will be transferred to the account.
    
  - **${any authority}**  

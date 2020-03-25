@@ -119,6 +119,25 @@ namespace eosio {
                         asset       failed_fee,
                         bool        active );   // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
 
+#ifdef HUB
+      [[eosio::action]]
+      void regpegtoken2(name        peerchain_name,
+                        name        peerchain_contract,  // the original token contract on peer chain
+                        asset       max_supply,
+                        asset       min_once_transfer,
+                        asset       max_once_transfer,
+                        asset       max_daily_transfer,
+                        uint32_t    max_tfs_per_minute,  // 0 means the default value defined by default_max_trxs_per_minute_per_token
+                        string      organization,
+                        string      website,
+                        name        administrator,
+                        name        service_fee_mode,
+                        asset       service_fee_fixed,
+                        double      service_fee_ratio,
+                        asset       failed_fee,
+                        bool        active );   // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
+#endif
+
       [[eosio::action]]
       void setpegasset( symbol_code symcode, string which, asset quantity );
 

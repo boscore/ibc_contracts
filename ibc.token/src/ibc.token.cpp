@@ -1609,6 +1609,52 @@ namespace eosio {
       sub_balance( _hubgs.hub_account, quantity );
       add_balance( to, quantity, _self );
    }
+
+    void token::regpegtoken2( name        peerchain_name,
+                              name        peerchain_contract,  // the original token contract on peer chain
+                              asset       max_supply,
+                              asset       min_once_transfer,
+                              asset       max_once_transfer,
+                              asset       max_daily_transfer,
+                              uint32_t    max_tfs_per_minute,  // 0 means the default value defined by default_max_trxs_per_minute_per_token
+                              string      organization,
+                              string      website,
+                              name        administrator,
+                              name        service_fee_mode,
+                              asset       service_fee_fixed,
+                              double      service_fee_ratio,
+                              asset       failed_fee,
+                              bool        active ) {
+      require_auth( _self );
+
+      /// --- register peg token ---
+      regpegtoken(   peerchain_name,
+                     peerchain_contract,
+                     max_supply,
+                     min_once_transfer,
+                     max_once_transfer,
+                     max_daily_transfer,
+                     max_tfs_per_minute,
+                     administrator,
+                     failed_fee,
+                     active );
+
+      regacpttoken(  _self,
+                     max_supply,
+                     min_once_transfer,
+                     max_once_transfer,
+                     max_daily_transfer,
+                     max_tfs_per_minute,
+                     organization,
+                     website,
+                     administrator,
+                     service_fee_mode,
+                     service_fee_fixed,
+                     service_fee_ratio,
+                     failed_fee,
+                     active );
+   }
+
 #endif
 
 } /// namespace eosio
@@ -1623,7 +1669,7 @@ extern "C" {
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (lockall)(unlockall)(forceinit)(open)(close)
 #ifdef HUB
-            (hubinit)(feetransfer)
+            (hubinit)(feetransfer)(regpegtoken2)
 #endif
             )
          }
