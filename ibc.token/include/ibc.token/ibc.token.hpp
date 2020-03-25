@@ -346,21 +346,27 @@ namespace eosio {
 
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_stats {
+         name        peerchain_name;
+         name        peerchain_contract;
          asset       supply;
          asset       max_supply;
          asset       min_once_withdraw;
          asset       max_once_withdraw;
          asset       max_daily_withdraw;
          uint32_t    max_wds_per_minute;  // max withdraw transactions per minute
+         string      organization;
+         string      website;
          name        administrator;
-         name        peerchain_name;
-         name        peerchain_contract;
+         name        service_fee_mode;    // "fixed"_n or "ratio"_n
+         asset       service_fee_fixed;
+         double      service_fee_ratio = 0;
          asset       failed_fee;
          asset       total_issue;
          uint64_t    total_issue_times;
          asset       total_withdraw;
          uint64_t    total_withdraw_times;
          bool        active;
+         bool        hub_enable = false;
 
          struct currency_stats_mutables {
             uint32_t    minute_trx_start;

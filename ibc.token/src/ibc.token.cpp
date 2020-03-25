@@ -165,7 +165,7 @@ namespace eosio {
          r.service_fee_mode   = service_fee_mode;
          r.service_fee_fixed  = service_fee_fixed;
          r.service_fee_ratio  = service_fee_ratio;
-         r.failed_fee   = failed_fee;
+         r.failed_fee         = failed_fee;
          r.total_transfer     =  asset{ 0, max_accept.symbol };
          r.total_transfer_times = 0;
          r.total_cash         =  asset{ 0, max_accept.symbol };
