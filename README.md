@@ -6,8 +6,8 @@ ibc_contracts
 </p>
 
 starting from version 4, ibc_contracts supports the hub protocol, through this protocol, 
-a star shaped inter-blockchain communication network can be formed, with one hub chain and multiple sister chains. 
-You can transfer a token on a sister chain to another sister chain with only one transfer, 
+a star shaped inter-blockchain communication network can be formed, with one hub chain and multiple parallel chains. 
+You can transfer a token on a parallel chain to another parallel chain with only one transfer, 
 for more detailed information, please refer to [IBC_Hub_Protocol.md](./docs/IBC_Hub_Protocol.md)
 
 
@@ -56,6 +56,7 @@ testing inter-blockchain token transfers in the bash scripts.
    Explains how to register a `token` in the IBC contracts to circulate on the two blockchains.
  - [Deployment_and_Test](./docs/Deployment_and_Test.md) Explains how to deploy and test the IBC system.
  - [IBC_Hub_Protocol](./docs/IBC_Hub_Protocol.md) Explains the hub protocol, and how to use it.
+ - [Upgrade_v3_to_v4.md](./docs/Upgrade_v3_to_v4.md)
  - [Trouble_Shooting](docs/Troubles_Shooting.md) Explains how to troubleshooting when IBC system encounters problems.
  - [EOSIO_IBC_Priciple_and_Design](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design.md)
  - [EOSIO_IBC_Priciple_and_Design 中文版](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design_zh.md)

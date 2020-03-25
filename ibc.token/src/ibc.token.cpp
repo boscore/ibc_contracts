@@ -1495,7 +1495,7 @@ namespace eosio {
    }
 
    const string error_info2 = "for the transfer action from the hub accout,it's memo string format "
-                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [relay=account] [optional user defined string]";
+                             "must be: <account>@<dest_chain_name> orig_trx_id=<trx_id> [worker=account] [optional user defined string]";
 
    void token::ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo  ){
       /// --- check to ---
@@ -1539,11 +1539,11 @@ namespace eosio {
       eosio_assert(hub_trx_p->from_quantity >= quantity && quantity >= hub_trx_p->mini_to_quantity, "quantity must in range [from_quantity,mini_to_quantity]");
 
       /// transfer fee to receiver
-      string relay = get_value_str_by_key_str( memo, "relay");
+      string worker = get_value_str_by_key_str( memo, "worker");
       name receiver = name();
-      if ( relay.size() ){
-         receiver = name(relay);
-         eosio_assert(is_account(receiver), "relay account does not exist");
+      if ( worker.size() ){
+         receiver = name(worker);
+         eosio_assert(is_account(receiver), "worker account does not exist");
       }
 
       /// recored to hubtrxs table

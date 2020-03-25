@@ -4,7 +4,7 @@ IBC System Deployment and Test
 
 This article will detail how to build, deploy and use the IBC system, and take the deployment between `BOS testnet`
 and `Kylin testnet` as an example. If you want to deploy IBC system between EOSIO blockchains, 
-such as between `EOS mainnet` and `Kylin or Jungle testnet` or between other side/sister chains 
+such as between `EOS mainnet` and `Kylin or Jungle testnet` or between other side/parallel chains 
 whose consensus algorithem didn't modified, you need not `ibc_plugin_bos`, 
 only `ibc_plugin_eos` is needed; if you want to deploy between EOSIO chains 
 whose underlying source code especially the consensus algorithem has been modified,
