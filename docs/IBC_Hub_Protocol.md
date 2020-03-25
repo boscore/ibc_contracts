@@ -134,36 +134,50 @@ Token Registration
 ------------------
 If a token wants to use the hub protocol, it needs to be registered in table `accepts` of the ibc.token contract on the hub chain. 
 That is to say, for a native token of the parallel chains, it needs to be registered twice in the ibc.token contract on the hub chain,
-once in the table `stats`, once in the table `accetps`, and any other parallel chain that wants to accept this token 
-also needs to register this token. Let's take chain_b's system token as an example and register it to the hub chain and 
-all other parallel chains.
+once in the table `stats`, once in the table `accetps`, 
+**To make the operation easier, we provide a convenient action `regpegtoken2`, which can register pegged token in two tables in one time.**
+Any other parallel chain that wants to accept this token also needs to register this token. 
+Let's take chain_b's system token as an example and register it to the hub chain and all other parallel chains.
 
 assume that all token's administrator account is ibc2token555
+
+#### register TOB to table `accepts` of chain_b
 ```shell
-# --- register TOB to table accepts of chain_b --- 
 $cleos_b push action ${contract_token} regacpttoken \
     '["eosio.token","1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
     "1000000.0000 TOB",1000,"chain_b organization","htttp://www.chain_b.io","ibc2token555",
     "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
+```
 
-# --- register TOB to table stats of chain_a --- 
-$cleos_a push action ${contract_token} regpegtoken \
-    '["chb","eosio.token","1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
-    "1000000.0000 TOB",1000,"ibc2token555","0.1000 TOB",true]' -p ${contract_token}
+#### register TOB to table `stats` and `accepts` of chain_a
+ 1) by one action `regpegtoken2`
+    ```shell
+    $cleos_a push action ${contract_token} regpegtoken2 \
+        '["chb","eosio.token",,"1000000000.0000 TOB","1.0000 TOB","10000.0000 TOB",
+        "1000000.0000 TOB",1000,"chain_b organization","https://www.chain_b.io","ibc2token555",
+        "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
+    ```
+2) or by actions `regpegtoken` and `regacpttoken`
+    ```shell
+    # --- register TOB to table stats of chain_a --- 
+    $cleos_a push action ${contract_token} regpegtoken \
+        '["chb","eosio.token","1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
+        "1000000.0000 TOB",1000,"ibc2token555","0.1000 TOB",true]' -p ${contract_token}
+    
+    # --- register TOB to table accepts of chain_a --- 
+    $cleos_a push action ${contract_token} regacpttoken \
+        '['${contract_token}',"1000000000.0000 TOB","1.0000 TOB","10000.0000 TOB",
+        "1000000.0000 TOB",1000,"chain_b organization","https://www.chain_b.io","ibc2token555",
+        "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
+    ```
 
-# --- register TOB to table accepts of chain_a --- 
-$cleos_a push action ${contract_token} regacpttoken \
-    '['${contract_token}',"1000000000.0000 TOB","1.0000 TOB","10000.0000 TOB",
-    "1000000.0000 TOB",1000,"chain_b organization","https://www.chain_b.io","ibc2token555",
-    "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
-
-# --- register TOB to table stats of chain_c --- 
+#### register TOB to table `stats` of chain_c and chain_d
+```
 $cleos_c push action ${contract_token} regpegtoken \
     '["cha",'${contract_token}',"1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
     "1000000.0000 TOB",1000,"ibc2token555","0.1000 TOB",true]' -p ${contract_token}
 
-# --- register TOB to table stats of chain_d --- 
-$cleos_c push action ${contract_token} regpegtoken \
+$cleos_d push action ${contract_token} regpegtoken \
     '["cha",'${contract_token}',"1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
     "1000000.0000 TOB",1000,"ibc2token555","0.1000 TOB",true]' -p ${contract_token}
 ```
