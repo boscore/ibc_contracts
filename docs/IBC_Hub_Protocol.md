@@ -141,7 +141,7 @@ Let's take chain_b's system token as an example and register it to the hub chain
 
 assume that all token's administrator account is ibc2token555
 
-#### register TOB to table `accepts` of chain_b
+#### 1) register TOB to table `accepts` of chain_b
 ```shell
 $cleos_b push action ${contract_token} regacpttoken \
     '["eosio.token","1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
@@ -149,7 +149,7 @@ $cleos_b push action ${contract_token} regacpttoken \
     "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
 ```
 
-#### register TOB to table `stats` and `accepts` of chain_a
+#### 2) register TOB to table `stats` and `accepts` of chain_a
  1) by one action `regpegtoken2`
     ```shell
     $cleos_a push action ${contract_token} regpegtoken2 \
@@ -157,7 +157,7 @@ $cleos_b push action ${contract_token} regacpttoken \
         "1000000.0000 TOB",1000,"chain_b organization","https://www.chain_b.io","ibc2token555",
         "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
     ```
-2) or by actions `regpegtoken` and `regacpttoken`
+ 2) or by actions `regpegtoken` and `regacpttoken`
     ```shell
     # --- register TOB to table stats of chain_a --- 
     $cleos_a push action ${contract_token} regpegtoken \
@@ -171,7 +171,7 @@ $cleos_b push action ${contract_token} regacpttoken \
         "fixed","0.1000 TOB",0.01,"0.1000 TOB",true]' -p ${contract_token}
     ```
 
-#### register TOB to table `stats` of chain_c and chain_d
+#### 3) register TOB to table `stats` of chain_c and chain_d
 ```
 $cleos_c push action ${contract_token} regpegtoken \
     '["cha",'${contract_token}',"1000000000.0000 TOB","1.0000 TOB","100000.0000 TOB",
