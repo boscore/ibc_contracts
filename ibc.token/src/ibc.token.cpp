@@ -1027,7 +1027,14 @@ namespace eosio {
 
       asset final_quantity;
 
-      if ( action_info.contract != _self ){  // rollback ibc transfer
+      bool ibc_withdraw = false;
+      auto sym_code_raw = action_info.quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
+      if ( itr != _stats.end() && peerchain_name == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ! ibc_withdraw ){  // rollback ibc transfer
          const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= action_info.quantity;
@@ -1112,7 +1119,14 @@ namespace eosio {
          const auto& record = idx.get( fixed_bytes<32>(trx_id.hash), "trx_id not found");
          transfer_action_info action_info = record.action;
 
-         if ( action_info.contract != _self ){  // rollback ibc transfer
+         bool ibc_withdraw = false;
+         auto sym_code_raw = action_info.quantity.symbol.code().raw();
+         auto itr = _stats.find( sym_code_raw );
+         if ( itr != _stats.end() && peerchain_name == itr->peerchain_name ){
+            ibc_withdraw = true;
+         }
+
+         if ( ! ibc_withdraw ){  // rollback ibc transfer
             const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
                r.accept -= action_info.quantity;
@@ -1594,8 +1608,11 @@ namespace eosio {
 
       if ( fee.amount > 0 ){
          if ( acpt.original_contract == _self ){
-            transfer_action_type action_data{ _hubgs.hub_account, receiver, fee, "hub trx fee"};
-            action( permission_level{ _self, "active"_n }, _self, "feetransfer"_n, action_data ).send();
+            const auto& balance = get_balance( _self, _hubgs.hub_account, hub_trx_p->from_quantity.symbol.code() );
+            if ( balance >= fee ){
+               transfer_action_type action_data{ _hubgs.hub_account, receiver, fee, "hub trx fee"};
+               action( permission_level{ _self, "active"_n }, _self, "feetransfer"_n, action_data ).send();
+            }
          } else {
             if ( receiver != _self && receiver != _hubgs.hub_account ){
                transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
