@@ -1581,13 +1581,20 @@ namespace eosio {
       const auto& acpt = get_currency_accept( hub_trx_p->from_quantity.symbol.code() );
       auto fee = hub_trx_p->from_quantity - hub_trx_p->to_quantity;
       auto receiver = hub_trx_p->fee_receiver;
-      if ( receiver != name() && is_account(receiver) && fee.amount > 0 ){
+
+      if ( receiver == name() || (! is_account(receiver))){
+         receiver = _self;
+      }
+
+      if ( fee.amount > 0 ){
          if ( acpt.original_contract == _self ){
             transfer_action_type action_data{ _hubgs.hub_account, receiver, fee, "hub trx fee"};
             action( permission_level{ _self, "active"_n }, _self, "feetransfer"_n, action_data ).send();
          } else {
-            transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
-            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+            if ( receiver != _self ){
+               transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
+               action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+            }
          }
       }
 
