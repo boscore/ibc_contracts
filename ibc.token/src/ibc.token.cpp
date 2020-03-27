@@ -1458,7 +1458,7 @@ namespace eosio {
          r.orig_trx_id        = orig_trx_id;
          r.to_chain           = memo_info.peerchain ;
          r.to_account         = memo_info.receiver;
-         r.to_quantity        = asset();
+         r.to_quantity        = asset{0,quantity.symbol};
          r.fee_receiver       = name();
          r.hub_trx_id         = capi_checksum256();
          r.hub_trx_time_slot  = 0;
@@ -1561,7 +1561,7 @@ namespace eosio {
       auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
          _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
-            r.to_quantity        = asset();
+            r.to_quantity.amount = 0;
             r.fee_receiver       = name();
             r.hub_trx_id         = capi_checksum256();
             r.hub_trx_time_slot  = 0;

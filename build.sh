@@ -2,12 +2,12 @@
 
 print_usage(){
     echo "usage:"
-	echo "$ build.sh eosio.cdt  # compile with eosio.cdt"
-	echo "$ build.sh bos.cdt    # compile with bos.cdt"
+	echo "$ ./build.sh bos.cdt    # compile with bos.cdt"
+	echo "$ ./build.sh eosio.cdt  # compile with eosio.cdt"
 	echo ""
 	echo "If deploy them on a hub chain, you need to compile with the hub protocol."
-	echo "$ build.sh eosio.cdt HUB_PROTOCOL=ON"
-    echo "$ build.sh bos.cdt HUB_PROTOCOL=ON"
+    echo "$ ./build.sh bos.cdt HUB_PROTOCOL=ON"
+	echo "$ ./build.sh eosio.cdt HUB_PROTOCOL=ON"
 }
 
 eosio_cdt_version=1.5
