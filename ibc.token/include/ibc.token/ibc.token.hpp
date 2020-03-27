@@ -529,7 +529,7 @@ namespace eosio {
                             const string&                   memo );
       void ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo );
       void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
-      void rollback_hub_trx( const transaction_id_type& hub_trx_id );   // when ibc transmit fails
+      void rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity );   // when ibc transmit fails
 #endif
    };
 

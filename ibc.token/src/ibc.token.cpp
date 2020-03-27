@@ -1025,6 +1025,8 @@ namespace eosio {
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
       print( memo.c_str() );
 
+      asset final_quantity;
+
       if ( action_info.contract != _self ){  // rollback ibc transfer
          const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
@@ -1040,7 +1042,7 @@ namespace eosio {
                fee.amount = 0;
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
             transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
@@ -1060,7 +1062,7 @@ namespace eosio {
                fee.amount = 0;
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
             transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
@@ -1072,7 +1074,7 @@ namespace eosio {
 
       #ifdef HUB
       if ( _hubgs.is_open ){
-         rollback_hub_trx( trx_id );
+         rollback_hub_trx( trx_id, final_quantity );
       }
       #endif
    }
@@ -1555,12 +1557,16 @@ namespace eosio {
       });
    }
 
-   void token::rollback_hub_trx( const transaction_id_type& hub_trx_id ){
+   void token::rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity ){
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
       auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
+         auto mini_to_quantity = quantity - (hub_trx_p->from_quantity - hub_trx_p->mini_to_quantity);
+
          _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+            r.from_quantity      = quantity;
+            r.mini_to_quantity   = mini_to_quantity;
             r.to_quantity.amount = 0;
             r.fee_receiver       = name();
             r.hub_trx_id         = capi_checksum256();
