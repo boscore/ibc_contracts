@@ -31,6 +31,7 @@
 *.out
 *.app
 
+bin/
 build/*
 .DS_Store
 
