@@ -642,7 +642,7 @@ namespace eosio {
       eosio_assert( quantity.amount <= st.max_once_withdraw.amount, "quantity greater then max_once_transfer");
 
       const auto& balance = get_balance( _self, from, quantity.symbol.code() );
-      eosio_assert( quantity.amount <= balance.amount, "overdrawn balance");
+      eosio_assert( quantity.amount <= balance.amount, "overdrawn balance1");
 
       // accumulate max_wds_per_minute and check
       auto current_time_sec = now();
@@ -1172,7 +1172,7 @@ namespace eosio {
       accounts from_acnts( _self, owner.value );
 
       const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
-      eosio_assert( from.balance.amount >= value.amount, "overdrawn balance" );
+      eosio_assert( from.balance.amount >= value.amount, "overdrawn balance2" );
       auto payer = owner;
       #ifdef HUB
       if ( _hubgs.is_open && payer == _hubgs.hub_account ){ payer = _self; }
@@ -1591,7 +1591,7 @@ namespace eosio {
             transfer_action_type action_data{ _hubgs.hub_account, receiver, fee, "hub trx fee"};
             action( permission_level{ _self, "active"_n }, _self, "feetransfer"_n, action_data ).send();
          } else {
-            if ( receiver != _self ){
+            if ( receiver != _self && receiver != _hubgs.hub_account ){
                transfer_action_type action_data{ _self, receiver, fee, "hub trx fee"};
                action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
             }
