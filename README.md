@@ -42,7 +42,7 @@ compatible combination:
 |----------------|---------------|
 | ibc_contracts  | v3.x.x / v4.x.x|
 | ibc_plugin_eos |  ibc-v3.x.x   |
-| ibc_plugin_bos |  ibc-v3.x.x   |
+| ibc_plugin_bos |  ibc-v3.x.x/ibc-v4.x.x   |
 
 ### IBC test localhost environment
 [ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment, 

@@ -102,8 +102,7 @@ The ibc.token contract supports hub protocol from v4, so both hub chain and all 
 they cannot be upgraded directly by deploying the v4 ibc.token contract,
 please refer to [Upgrade_v3_to_v4.md](./Upgrade_v3_to_v4.md) for detailed upgrade process.
 
-In addtion, we upgraded [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos) to v4 to provide funcitons to complete worker-protocol automatically,
-and upgraded [ibc_plugin_eos](https://github.com/boscore/ibc_plugin_eos) to v4 for better compatibility with eosio v2.0 .
+In addtion, we upgraded [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos) to v4 to provide funcitons to complete worker-protocol automatically.
 
 #### Build
 The contract(ibc.token) compilation command for hub chain is:
