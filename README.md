@@ -41,7 +41,7 @@ compatible combination:
 | code           |  tag(s)       |
 |----------------|---------------|
 | ibc_contracts  | v3.x.x / v4.x.x|
-| ibc_plugin_eos |  ibc-v3.x.x   |
+| ibc_plugin_eos |  ibc-v3.x.x/ibc-v4.0.x   |
 | ibc_plugin_bos |  ibc-v3.x.x/ibc-v4.x.x   |
 
 ### IBC test localhost environment
