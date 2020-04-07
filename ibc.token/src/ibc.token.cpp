@@ -174,6 +174,48 @@ namespace eosio {
       });
    }
 
+
+   void token::addacpttoken( name        original_contract,
+                             asset       max_accept,
+                             asset       min_once_transfer,
+                             asset       max_once_transfer,
+                             asset       max_daily_transfer,
+                             uint32_t    max_tfs_per_minute,
+                             string      organization,
+                             string      website,
+                             name        administrator,
+                             name        service_fee_mode,
+                             asset       service_fee_fixed,
+                             double      service_fee_ratio,
+                             asset       failed_fee,
+                             bool        active,
+                             asset       accept,
+                             asset       total_transfer,
+                             asset       total_cash ){
+
+      _accepts.emplace( _self, [&]( auto& r ){
+         r.original_contract  = original_contract;
+         r.accept             = accept;
+         r.max_accept         = max_accept;
+         r.min_once_transfer  = min_once_transfer;
+         r.max_once_transfer  = max_once_transfer;
+         r.max_daily_transfer = max_daily_transfer;
+         r.max_tfs_per_minute = max_tfs_per_minute;
+         r.organization       = organization;
+         r.website            = website;
+         r.administrator      = administrator;
+         r.service_fee_mode   = service_fee_mode;
+         r.service_fee_fixed  = service_fee_fixed;
+         r.service_fee_ratio  = service_fee_ratio;
+         r.failed_fee         = failed_fee;
+         r.total_transfer     = total_transfer;
+         r.total_transfer_times = 0;
+         r.total_cash         = total_cash;
+         r.total_cash_times   = 0;
+         r.active             = active;
+      });
+   }
+
    void token::setacptasset( symbol_code symcode, string which, asset quantity ) {
       const auto& acpt = get_currency_accept( symcode );
       eosio_assert( quantity.symbol == acpt.accept.symbol, "invalid symbol" );
@@ -328,6 +370,39 @@ namespace eosio {
       });
 
       update_stats2( max_supply.symbol.code() );
+   }
+
+   void token::addpegtoken( name        peerchain_name,
+                     name        peerchain_contract,
+                     asset       max_supply,
+                     asset       min_once_withdraw,
+                     asset       max_once_withdraw,
+                     asset       max_daily_withdraw,
+                     uint32_t    max_wds_per_minute,
+                     name        administrator,
+                     asset       failed_fee,
+                     bool        active,
+                     asset       supply,
+                     asset       total_issue,
+                     asset       total_withdraw){
+
+      _stats.emplace( _self, [&]( auto& r ){
+         r.supply             = supply;
+         r.max_supply         = max_supply;
+         r.min_once_withdraw  = min_once_withdraw;
+         r.max_once_withdraw  = max_once_withdraw;
+         r.max_daily_withdraw = max_daily_withdraw;
+         r.max_wds_per_minute = max_wds_per_minute;
+         r.administrator      = administrator;
+         r.peerchain_name     = peerchain_name;
+         r.peerchain_contract = peerchain_contract;
+         r.failed_fee         = failed_fee;
+         r.total_issue        = total_issue;
+         r.total_issue_times  = 0;
+         r.total_withdraw     = total_withdraw;
+         r.total_withdraw_times = 0;
+         r.active             = active;
+      });
    }
 
    void token::setpegasset( symbol_code symcode, string which, asset quantity ) {
@@ -1697,7 +1772,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)
+            (lockall)(unlockall)(forceinit)(open)(close)(addacpttoken)(addpegtoken)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)
 #endif

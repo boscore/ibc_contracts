@@ -89,6 +89,24 @@ namespace eosio {
                          bool        active );  // when non active, transfer not allowed, but cash trigger by peerchain withdraw can still execute
 
       [[eosio::action]]
+      void addacpttoken( name        original_contract,
+                         asset       max_accept,
+                         asset       min_once_transfer,
+                         asset       max_once_transfer,
+                         asset       max_daily_transfer,
+                         uint32_t    max_tfs_per_minute,
+                         string      organization,
+                         string      website,
+                         name        administrator,
+                         name        service_fee_mode,
+                         asset       service_fee_fixed,
+                         double      service_fee_ratio,
+                         asset       failed_fee,
+                         bool        active,
+                         asset       accept,
+                         asset       total_transfer,
+                         asset       total_cash);
+      [[eosio::action]]
       void setacptasset( symbol_code symcode, string which, asset quantity );
 
       [[eosio::action]]
@@ -118,6 +136,21 @@ namespace eosio {
                         name        administrator,
                         asset       failed_fee,
                         bool        active );   // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
+
+      [[eosio::action]]
+      void addpegtoken( name        peerchain_name,
+                        name        peerchain_contract,
+                        asset       max_supply,
+                        asset       min_once_withdraw,
+                        asset       max_once_withdraw,
+                        asset       max_daily_withdraw,
+                        uint32_t    max_wds_per_minute,
+                        name        administrator,
+                        asset       failed_fee,
+                        bool        active,
+                        asset       supply,
+                        asset       total_issue,
+                        asset       total_withdraw);
 
 #ifdef HUB
       [[eosio::action]]
