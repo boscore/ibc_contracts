@@ -708,6 +708,9 @@ $cleos_tls push action bosibc.io regpegtoken \
 
 $cleos_tls push action bosibc.io regpegtoken \
      '["bos","bosibc.io","10000000000.0000 TPT","0.1000 TPT","1000000.0000 TPT","10000000.0000 TPT",50,"bostkadmin33","0.0100 TPT",true]' -p bosibc.io
+
+$cleos_tls push action bosibc.io regpegtoken \
+     '["bos","unicorntoken","10000000000.0000 UB","0.1000 UB","1000000.0000 UB","10000000.0000 UB",50,"bostkadmin33","0.0100 UB",true]' -p bosibc.io
 ```
 
 #### step end
