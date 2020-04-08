@@ -30,6 +30,11 @@ cleos_eos='cleos -u http://peer1.eoshuobipool.com:8181'
 base_dir=/Users/song/Code/github.com/boscore/bos.contract-prebuild/bosibc
 ```
 
+set global active false
+``` 
+$cleos_eos push action bosibc.io setglobal '["eos",false]' -p bosibc.io
+```
+
 get table accepts info
 ```
 $cleos_eos get table bosibc.io bosibc.io accepts
@@ -257,6 +262,11 @@ $cleos_eos push action bosibc.io regpegtoken \
      '["bos","bosibc.io","10000000000.0000 TLOS","1.0000 TLOS","1000000.0000 TLOS","10000000.0000 TLOS",50,"bostkadmin33","0.0100 TLOS",true]' -p bosibc.io
 ```
 
+#### step end
+set global active true
+``` 
+$cleos_eos push action bosibc.io setglobal '["eos",true]' -p bosibc.io
+```
 
 
 ### 2. BOSCORE mainnet ibc.token upgrade process
@@ -266,6 +276,11 @@ $cleos_eos push action bosibc.io regpegtoken \
 bash variables
 ```
 cleos_bos='cleos -u http://bosapi.tokenpocket.pro'
+```
+
+set global active false
+``` 
+$cleos_bos push action bosibc.io setglobal '["bos",false]' -p bosibc.io
 ```
 
 get table accepts info
@@ -517,7 +532,6 @@ $cleos_bos push action bosibc.io hubinit '["hub.io"]' -p bosibc.io
 
 register pegged tokens to accetps table to support hub transaction. 
 ``` 
-
 $cleos_bos push action bosibc.io regacpttoken \
     '["bosibc.io","1000000000.0000 EOS","0.2000 EOS","100000.0000 EOS",
     "1000000.0000 EOS",100,"block one","https://eos.io","bostkadmin33","fixed","0.0100 EOS",0.0,"0.0100 EOS",true]' -p bosibc.io
@@ -541,6 +555,11 @@ check table accepts
 $cleos_bos get table bosibc.io bosibc.io accepts
 ```
 
+#### step end
+set global active true
+``` 
+$cleos_bos push action bosibc.io setglobal '["bos",true]' -p bosibc.io
+```
 
 ### 3. TELOS mainnet ibc.token upgrade process
 
@@ -548,21 +567,88 @@ $cleos_bos get table bosibc.io bosibc.io accepts
 
 bash variables
 ```
-cleos_tls='cleos -u '
+cleos_tls='cleos -u http://telos.caleos.io'
+```
+
+set global active false
+``` 
+$cleos_tls push action bosibc.io setglobal '["tlos",false]' -p bosibc.io
 ```
 
 get table accepts info
 ```
 $cleos_tls get table bosibc.io bosibc.io accepts
 
-
+{
+  "rows": [{
+      "original_contract": "eosio.token",
+      "peg_token_symbol": "4,TLOS",
+      "accept": "0.2000 TLOS",
+      "max_accept": "355208370.6674 TLOS",
+      "min_once_transfer": "1.0000 TLOS",
+      "max_once_transfer": "1000000.0000 TLOS",
+      "max_daily_transfer": "10000000.0000 TLOS",
+      "max_tfs_per_minute": 1000,
+      "organization": "Telos Foundation",
+      "website": "https://www.telosfoundation.io",
+      "administrator": "bostkadmin33",
+      "service_fee_mode": "fixed",
+      "service_fee_fixed": "0.1000 TLOS",
+      "service_fee_ratio": "0.00100000000000000",
+      "failed_fee": "0.1000 TLOS",
+      "total_transfer": "2.0000 TLOS",
+      "total_transfer_times": 2,
+      "total_cash": "1.8000 TLOS",
+      "total_cash_times": 2,
+      "active": 1,
+      "mutables": {
+        "minute_trx_start": 1584885482,
+        "minute_trxs": 1,
+        "daily_tf_start": 1584885482,
+        "daily_tf_sum": "1.0000 TLOS",
+        "daily_wd_start": 0,
+        "daily_wd_sum": "0 "
+      }
+    }
+  ],
+  "more": false
+}
 
 ```
 
 get table stats info
 ``` 
 $cleos_tls get table bosibc.io bosibc.io stats
-
+{
+  "rows": [{
+      "supply": "59.0000 BOS",
+      "max_supply": "1000000000.0000 BOS",
+      "min_once_withdraw": "1.0000 BOS",
+      "max_once_withdraw": "1000000.0000 BOS",
+      "max_daily_withdraw": "10000000.0000 BOS",
+      "max_wds_per_minute": 1000,
+      "administrator": "bostkadmin33",
+      "peerchain_name": "bos",
+      "peerchain_contract": "eosio.token",
+      "orig_token_symbol": "4,BOS",
+      "failed_fee": "0.1000 BOS",
+      "total_issue": "61.0000 BOS",
+      "total_issue_times": 14,
+      "total_withdraw": "2.0000 BOS",
+      "total_withdraw_times": 2,
+      "active": 1,
+      "mutables": {
+        "minute_trx_start": 1584880967,
+        "minute_trxs": 1,
+        "daily_isu_start": 0,
+        "daily_isu_sum": "0 ",
+        "daily_wd_start": 1584879094,
+        "daily_wd_sum": "2.0000 BOS"
+      }
+    }
+  ],
+  "more": false
+}
 
 ```
 
@@ -588,11 +674,13 @@ or use pre-build contract on [bos.contract-prebuild/bosibc/upgrade_v3_to_v4_step
 ibc_contracts_dir=${base_dir}/upgrade_v3_to_v4_step2
 $cleos_tls set contract bosibc.io ${ibc_contracts_dir}/ibc.token -x 1000 -p bosibc.io
 
+$cleos_tls push action bosibc.io addacpttoken \
+     '["eosio.token","355208370.0000 TLOS","1.0000 TLOS","1000000.0000 TLOS",
+     "10000000.0000 TLOS",50,"Telos Foundation","https://www.telosfoundation.io","bostkadmin33","fixed","0.1000 TLOS",0.0,"0.0100 TLOS",true,"0.2000 TLOS","2.0000 TLOS","1.8000 TLOS"]' -p bosibc.io
 
-
-
-
-
+$cleos_tls push action bosibc.io addpegtoken \
+        '["bos","eosio.token","1000000000.0000 BOS","0.2000 BOS","1000000.0000 BOS",
+        "10000000.0000 BOS",50,"bostkadmin33","0.0010 BOS",true,"59.0000 BOS","61.0000 BOS","2.0000 BOS"]' -p bosibc.io
 ```
 
 check if tables had added
@@ -607,10 +695,25 @@ or use pre-build contract on [bos.contract-prebuild/bosibc](https://github.com/b
 
 ```
 ibc_contracts_dir=${base_dir}
-$cleos_eos set contract bosibc.io ${ibc_contracts_dir}/ibc.token -x 1000 -p bosibc.io
+$cleos_tls set contract bosibc.io ${ibc_contracts_dir}/ibc.token -x 1000 -p bosibc.io
 ```
 
 #### step 5 : register pegged tokens (hub)
 ```
+$cleos_tls push action bosibc.io regpegtoken \
+     '["bos","bosibc.io","10000000000.0000 EOS","0.1000 EOS","1000000.0000 EOS","10000000.0000 EOS",50,"bostkadmin33","0.0100 EOS",true]' -p bosibc.io
 
+$cleos_tls push action bosibc.io regpegtoken \
+     '["bos","bosibc.io","10000000000.0000 USDT","0.1000 USDT","1000000.0000 USDT","10000000.0000 USDT",50,"bostkadmin33","0.0100 USDT",true]' -p bosibc.io
+
+$cleos_tls push action bosibc.io regpegtoken \
+     '["bos","bosibc.io","10000000000.0000 TPT","0.1000 TPT","1000000.0000 TPT","10000000.0000 TPT",50,"bostkadmin33","0.0100 TPT",true]' -p bosibc.io
 ```
+
+#### step end
+set global active true
+``` 
+$cleos_tls push action bosibc.io setglobal '["tlos",true]' -p bosibc.io
+```
+
+
