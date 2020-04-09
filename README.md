@@ -36,13 +36,21 @@ and [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos),
 There are currently multiple major versions for all these three software repositories and between major versions maybe incompatible, 
 so the three repositories need to use the correct major version number to coordinate their work.
 
-compatible combination:  
+compatible combination 1:  
 
 | code           |  tag(s)       |
 |----------------|---------------|
-| ibc_contracts  | v3.x.x / v4.x.x|
-| ibc_plugin_eos |  ibc-v3.x.x/ibc-v4.0.x   |
+| ibc_contracts  |  v4.1.x       |
+| ibc_plugin_bos |  ibc-v4.1.x   |
+| ibc_plugin_eos |  ibc-v3.x.x/ibc-v4.x.x   |
+
+compatible combination 2:  
+
+| code           |  tag(s)       |
+|----------------|---------------|
+| ibc_contracts  | v3.x.x / v4.0.x|
 | ibc_plugin_bos |  ibc-v3.x.x/ibc-v4.x.x   |
+| ibc_plugin_eos |  ibc-v3.x.x/ibc-v4.x.x   |
 
 ### IBC test localhost environment
 [ibc_test_env](https://github.com/boscore/ibc_test_env) provides a great localhost IBC test cluster environment, 
