@@ -1462,6 +1462,13 @@ namespace eosio {
       eosio_assert( diff >= 0 && diff < quantity.amount, "diff >= 0 && diff < quantity.amount assert failed");
       asset mini_to_quantity{quantity.amount - diff, quantity.symbol};
 
+      eosio_assert( mini_to_quantity >= acpt.min_once_transfer, "mini_to_quantity >= acpt.min_once_transfer assert failed" );
+
+      auto ptr = _stats.find(quantity.symbol.code().raw());
+      if ( ptr != _stats.end() ){
+         eosio_assert( mini_to_quantity >= ptr->min_once_withdraw, "mini_to_quantity >= ptr->min_once_withdraw assert failed" );
+      }
+
       /// record to hub table
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       _hubtrxs.emplace( _self, [&]( auto& r ) {
