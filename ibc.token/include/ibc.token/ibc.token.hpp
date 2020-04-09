@@ -505,6 +505,7 @@ namespace eosio {
          capi_checksum256      orig_trx_id;
          name                  to_chain;
          name                  to_account;
+         string                orig_pure_memo;
          asset                 to_quantity;
          name                  fee_receiver;
          capi_checksum256      hub_trx_id;

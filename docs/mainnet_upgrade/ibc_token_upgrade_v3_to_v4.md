@@ -8,6 +8,7 @@ Contents
  * [EOSIO mainnet ibc.token upgrade process](#1-eosio-mainnet-ibctoken-upgrade-process)
  * [BOSCORE mainnet ibc.token upgrade process](#2-boscore-mainnet-ibctoken-upgrade-process)
  * [TELOS mainnet ibc.token upgrade process](#3-telos-mainnet-ibctoken-upgrade-process)
+ * [Test](#test)
  
 
 **Note: In v3 and v4 versions, the definitions of tables `accepts` and `stats` are different, 
@@ -568,6 +569,7 @@ $cleos_bos push action bosibc.io setglobal '["bos",true]' -p bosibc.io
 bash variables
 ```
 cleos_tls='cleos -u http://telos.caleos.io'
+cleos_tls='cleos -u https://api.telos.telosgreen.com'
 ```
 
 set global active false
@@ -707,10 +709,10 @@ $cleos_tls push action bosibc.io regpegtoken \
      '["bos","bosibc.io","10000000000.0000 USDT","0.1000 USDT","1000000.0000 USDT","10000000.0000 USDT",50,"bostkadmin33","0.0100 USDT",true]' -p bosibc.io
 
 $cleos_tls push action bosibc.io regpegtoken \
-     '["bos","bosibc.io","10000000000.0000 TPT","0.1000 TPT","1000000.0000 TPT","10000000.0000 TPT",50,"bostkadmin33","0.0100 TPT",true]' -p bosibc.io
+     '["bos","bosibc.io","10000000000.0000 TPT","100.0000 TPT","10000000.0000 TPT","100000000.0000 TPT",50,"bostkadmin33","1.0000 TPT",true]' -p bosibc.io
 
 $cleos_tls push action bosibc.io regpegtoken \
-     '["bos","unicorntoken","10000000000.0000 UB","0.1000 UB","1000000.0000 UB","10000000.0000 UB",50,"bostkadmin33","0.0100 UB",true]' -p bosibc.io
+     '["bos","unicorntoken","10000000000.0000 UB","1.0000 UB","50000.0000 UB","10000000.0000 UB",50,"bostkadmin33","0.0100 UB",true]' -p bosibc.io
 ```
 
 #### step end
@@ -720,3 +722,15 @@ $cleos_tls push action bosibc.io setglobal '["tlos",true]' -p bosibc.io
 ```
 
 
+### Test
+``` 
+# transfer EOS from EOS mainnet account bosisgreatvv to TELOS mainnet account telos22acnt1.
+$cleos_eos push action eosio.token transfer '[ bosisgreatvv, bosibc.io, "1.2345 EOS", "hub.io@bos >> telos22acnt1@tlos hello world!"]' -p bosisgreatvv
+
+# transfer BOS from EOS mainnet account eos3account1 to TELOS mainnet account telos22acnt1.
+$cleos_eos push action bosibc.io transfer '[ eos3account1, bosibc.io, "4.5678 BOS", "hub.io@bos >> telos22acnt1@tlos hello world 2!"]' -p eos3account1
+
+# transfer TLOS from TLOS mainnet account telos22acnt1 to EOS mainnet account bosisgreatvv.
+$cleos_tls push action eosio.token transfer '[ telos22acnt1, bosibc.io, "6.7890 TLOS", "hub.io@bos >> bosisgreatvv@eos hello world 3!"]' -p telos22acnt1
+
+```

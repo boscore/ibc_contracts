@@ -1474,6 +1474,7 @@ namespace eosio {
          r.orig_trx_id        = orig_trx_id;
          r.to_chain           = memo_info.peerchain ;
          r.to_account         = memo_info.receiver;
+         r.orig_pure_memo     = memo_info.notes;
          r.to_quantity        = asset{0,quantity.symbol};
          r.fee_receiver       = name();
          r.hub_trx_id         = capi_checksum256();
