@@ -1,6 +1,6 @@
 Upgrade_v3_to_v4
 ----------------
-
+## Overview
 
 In v4, the definitions of tables `accept` and `stats` have been modified, 
 so we need to delete these two tables first, then deploy ibc.token v4 contract and set the corresponding values of the tables.
@@ -26,9 +26,7 @@ this branch add a new action:
 cleos push action <ibc_token_contract> deltokentbl '[]' -p <some_account>
 ```
 
-
 #### Step4: set v4 ibc.token contract
-
 
 #### Step5: register token
 register accepts and pegtokens again use the data obtained previously
@@ -37,3 +35,8 @@ cleos push action <ibc_token_contract> regacpttoken '[....]' ...
 cleos push action <ibc_token_contract> regpegtoken '[....]' ...
 ```
 
+## Guide
+
+This article give a detail and directive steps to upgrade EOS & BOS & TELOS.
+
+[ibc_token_upgrade_v3_to_v4.md](mainnet_upgrade/ibc_token_upgrade_v3_to_v4.md)

@@ -31,7 +31,7 @@ cleos_eos='cleos -u http://peer1.eoshuobipool.com:8181'
 base_dir=/Users/song/Code/github.com/boscore/bos.contract-prebuild/bosibc
 ```
 
-set global active false
+set global active false to pause IBC function for the upgrading.
 ``` 
 $cleos_eos push action bosibc.io setglobal '["eos",false]' -p bosibc.io
 ```
@@ -264,11 +264,10 @@ $cleos_eos push action bosibc.io regpegtoken \
 ```
 
 #### step end
-set global active true
+set global active true to enable IBC function.
 ``` 
 $cleos_eos push action bosibc.io setglobal '["eos",true]' -p bosibc.io
 ```
-
 
 ### 2. BOSCORE mainnet ibc.token upgrade process
 
