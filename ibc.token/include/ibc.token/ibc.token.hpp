@@ -228,6 +228,7 @@ namespace eosio {
       void hubinit( name hub_account );
 
       // inline action
+      [[eosio::action]] /// used to support blockchain browser display detail information
       void feetransfer( name from, name to, asset quantity, string memo );
 #endif
       static asset get_supply( name token_contract_account, symbol_code sym_code )
