@@ -397,7 +397,7 @@ namespace eosio {
    void token::unregtoken( name table, symbol_code sym_code ){
       require_auth( _self );
 
-      if ( table == ""_n ){
+      if ( table == "all"_n ){
          auto ptr1 = _accepts.find( sym_code.raw() );
          if ( ptr1 != _accepts.end() ){
             _accepts.erase( ptr1 );

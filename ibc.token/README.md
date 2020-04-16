@@ -329,8 +329,8 @@ Modify fee related members in currency_stats struct.
    void unregtoken( name table, symbol_code sym_code );
 ```
  - delete token register record in table accepts or stats.
- - **table** table name, table name must be one of **empty string** ,`accepts` and `stats`, 
- when it's empty string, all records in table `accepts` or `stats` will be deleted.
+ - **table** table name, table name must be one of `all` ,`accepts` and `stats`, 
+ when it's `all`, all records in table `accepts` or `stats` will be deleted.
  - **sym_code** token symbol code, e.g. `BOS`,`EOS`.
  - require auth of _self
 
