@@ -109,7 +109,7 @@ void setchainbool( name peerchain_name, string which, bool value );
                      asset       failed_fee,
                      bool        active );
 ```
-This action is used to register acceptable token.
+This action is used to register blockchain native token, which is originally issued on this blockchain.
  - **original_contract** account name of the token contract to be registered.
  - **max_accept** maximum amount of receivable assets.
  - **min_once_transfer** minimum amount of single transfer
@@ -127,7 +127,7 @@ This action is used to register acceptable token.
     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
  - require auth of _self
 
-Note: from IBC version 4, the peg token symbol must same with the original token symbol.
+Note: from IBC version 4, the pegged token symbol must same with the original token symbol.
 
 ``` 
 contract_token=ibc2token555
@@ -212,9 +212,9 @@ Modify fee related members in currency_accept struct.
                     bool        active );
 
 ```
-This action is used to register peg token.
+This action is used to register pegged token, which is originally issued on other blockchains.
  - **peerchain_name** the name of the chain where the original token was located.
- - **peerchain_contract** the peg token's original token contract name on it's original chain.
+ - **peerchain_contract** the pegged token's original token contract name on it's original chain.
  - **max_supply** maximum supply
  - **min_once_withdraw** minimum amount of single withdraw
  - **max_once_withdraw** maximum amount of single withdraw
@@ -222,21 +222,67 @@ This action is used to register peg token.
  - **max_wds_per_minute** maximum number of withdraws per minute, appropriate value range is [10,150];
  - **administrator** this token's administrator, who can set some parameters related to this token.
  - **failed_fee** use this value to calculate fee for the filed withdraw transaction.
- - **active** set the initial active state of this peg token, 
+ - **active** set the initial active state of this pegged token, 
      when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
  - require auth of _self
 
 ``` 
 contract_token=ibc2token555
-run on EOS mainnet to register BOS's peg token, the peg token symbol is BOS:
+run on EOS mainnet to register BOS's pegged token, the pegged token symbol is BOS:
 $ cleos push action ${contract_token} regpegtoken \
     '["bos","eosio.token","4,BOS","4,BOS","1000000000.0000 BOS","1.0000 BOS","10000.0000 BOS",
     "1000000.0000 BOS",1000,"ibc2token555","0.1000 BOS",true]' -p ${contract_token}
 
-run on BOS mainnet to register EOS's peg token, the peg token symbol is EOS:
+run on BOS mainnet to register EOS's pegged token, the pegged token symbol is EOS:
 $ cleos push action ${contract_token} regpegtoken \
     '["eos","eosio.token","4,EOS","4,EOS","1000000000.0000 EOS","1.0000 EOS","10000.0000 EOS",
     "1000000.0000 EOS",1000,"ibc2token555","0.1000 EOS",true]' -p ${contract_token}
+```
+
+#### regpegtoken2
+```
+ void regpegtoken2(     name        peerchain_name,
+                        name        peerchain_contract,  // the original token contract on peer chain
+                        asset       max_supply,
+                        asset       min_once_transfer,
+                        asset       max_once_transfer,
+                        asset       max_daily_transfer,
+                        uint32_t    max_tfs_per_minute,  // 0 means the default value defined by default_max_trxs_per_minute_per_token
+                        string      organization,
+                        string      website,
+                        name        administrator,
+                        name        service_fee_mode,
+                        asset       service_fee_fixed,
+                        double      service_fee_ratio,
+                        asset       failed_fee,
+                        bool        active );   // when non active, transfer not allowed, but cash which trigger by peerchain transfer can still execute
+```
+This action is used to register pegged token (which is originally issued on other blockchains) and support hub protocol meanwhile,
+this action equals call regpegtoken(...) firstly and then call regacpttoken(...).
+ - **peerchain_name** the name of the chain where the original token was located.
+ - **peerchain_contract** the pegged token's original token contract name on it's original chain.
+ - **max_supply** maximum supply
+ - **min_once_transfer** minimum amount of single transfer
+ - **max_once_transfer** maximum amount of single transfer
+ - **max_daily_transfer** maximum amount of daily transfer
+ - **max_tfs_per_minute** maximum number of transfers per minute, appropriate value range is [10,150];
+ - **organization** organization name
+ - **website** official website address
+ - **administrator** this token's administrator, who can set some parameters related to this token.
+ - **service_fee_mode** charging mode, must be "fixed" or "ratio"
+ - **service_fee_fixed** if service_fee_mode == fixed, use this value to calculate the successful transfer fee.
+ - **service_fee_ratio** if service_fee_mode == ratio, use this value to calculate the successful transfer fee.
+ - **failed_fee** use this value to calculate fee for the filed transfer transaction.
+ - **active** set the initial active state of this pegged token, 
+     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
+ - require auth of _self
+
+``` 
+contract_token=ibc2token555
+run on BOS mainnet to register EOS's pegged token, the pegged token symbol is EOS:
+$ cleos push action ${contract_token} regpegtoken2 \
+    '["eos","eosio.token","1000000000.0000 EOS","1.0000 EOS","10000.0000 EOS",
+    "1000000.0000 EOS",100,"eosio","https://eos.io","ibc2token555","fixed","0.1000 EOS",0.0,"0.0500 EOS",true]' -p ${contract_token}
 ```
 
 #### setpegasset
@@ -244,7 +290,7 @@ $ cleos push action ${contract_token} regpegtoken \
   void setpegasset( symbol_code symcode, string which, asset quantity )
 ```
 Modify only one member of type `asset` in currency_stats struct.
- - **symcode** the symcode of registered peg token.
+ - **symcode** the symcode of registered pegged token.
  - **which** must be one of "max_supply", "min_once_withdraw", "max_once_withdraw", "max_daily_withdraw".
  - **quantity** the assets' value to be set.
  - require auth of this token's administrator
@@ -254,7 +300,7 @@ Modify only one member of type `asset` in currency_stats struct.
   void setpegint( symbol_code symcode, string which, uint64_t value )
 ```
 Modify only one member of type `int` in currency_stats struct.
- - **symcode** the symcode of registered peg token.
+ - **symcode** the symcode of registered pegged token.
  - **which** must be "max_wds_per_minute".
  - **value** the value to be set.
  - require auth of this token's administrator
@@ -264,7 +310,7 @@ Modify only one member of type `int` in currency_stats struct.
   void setpegbool( symbol_code symcode, string which, bool value )
 ```
 Modify only one member of type `bool` in currency_stats struct.
- - **symcode** the symcode of registered peg token.
+ - **symcode** the symcode of registered pegged token.
  - **which** must be "active".
  - **value** the bool value to be set.
  - require auth of this token's administrator
@@ -274,7 +320,7 @@ Modify only one member of type `bool` in currency_stats struct.
   void setpegtkfee( symbol_code symcode, asset fee )
 ```
 Modify fee related members in currency_stats struct.
- - **symcode** the symcode of registered peg token.
+ - **symcode** the symcode of registered pegged token.
  - **fee** fixed fee quota
  - require auth of _self
 
