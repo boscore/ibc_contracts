@@ -1737,7 +1737,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)
+            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)
 #endif
