@@ -307,7 +307,7 @@ namespace eosio {
       eosio_assert( failed_fee.amount * 10 <= min_once_withdraw.amount, "failed_fee.amount * 10 <= min_once_withdraw.amount assert failed");
 
       auto existing = _stats.find( max_supply.symbol.code().raw() );
-      eosio_assert( existing == _stats.end(), "token contract already exist" );
+      eosio_assert( existing == _stats.end(), "token already exist" );
 
       _stats.emplace( _self, [&]( auto& r ){
          r.supply             = asset{ 0, max_supply.symbol };
