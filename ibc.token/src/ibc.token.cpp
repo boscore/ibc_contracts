@@ -397,6 +397,18 @@ namespace eosio {
    void token::unregtoken( name table, symbol_code sym_code ){
       require_auth( _self );
 
+      if ( table == ""_n ){
+         auto ptr1 = _accepts.find( sym_code.raw() );
+         if ( ptr1 != _accepts.end() ){
+            _accepts.erase( ptr1 );
+         }
+
+         auto ptr2 = _stats.find( sym_code.raw() );
+         if ( ptr2 != _stats.end() ){
+            _stats.erase( ptr2 );
+         }
+      }
+
       if ( table == "accepts"_n ){
          const auto& acpt = get_currency_accept( sym_code );
          _accepts.erase( acpt );
@@ -409,7 +421,7 @@ namespace eosio {
          return;
       }
 
-      eosio_assert(false, "parameter table must be accepts or stats");
+      eosio_assert(false, "parameter table must be empty string or accepts or stats");
    }
 
 
