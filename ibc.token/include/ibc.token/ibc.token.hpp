@@ -150,6 +150,9 @@ namespace eosio {
       [[eosio::action]]
       void setpegtkfee( symbol_code symcode, asset fee );
 
+      [[eosio::action]]
+      void unregtoken( name table, symbol_code sym_code );
+
       // called in C apply function
       void transfer_notify( name    code,
                             name    from,

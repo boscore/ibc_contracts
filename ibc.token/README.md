@@ -324,6 +324,15 @@ Modify fee related members in currency_stats struct.
  - **fee** fixed fee quota
  - require auth of _self
 
+#### unregtoken
+``` 
+   void unregtoken( name table, symbol_code sym_code );
+```
+ - delete token register record in table accepts or stats.
+ - **table** table name must be `accepts` or `stats`.
+ - **sym_code** token symbol code, e.g. `BOS`,`EOS`.
+ - require auth of _self
+
 #### fcrollback
 ``` 
   void fcrollback( name peerchain_name, const std::vector<transaction_id_type> trxs );

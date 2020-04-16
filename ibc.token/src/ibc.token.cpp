@@ -394,6 +394,24 @@ namespace eosio {
       });
    }
 
+   void token::unregtoken( name table, symbol_code sym_code ){
+      if ( table == "accepts"_n ){
+         const auto& acpt = get_currency_accept( sym_code );
+         _accepts.erase( acpt );
+         return;
+      }
+
+      if ( table == "stats"_n ){
+         const auto& st = get_currency_stats( sym_code );
+         _stats.erase( st );
+         return;
+      }
+
+      eosio_assert(false, "parameter table must be accepts or stats");
+   }
+
+
+
    /**
     * ---- 'ibc transfer action's memo string format' ----
     * memo string format is '{account_name}@{chain_name} {user-defined string}', user-defined string is optinal
