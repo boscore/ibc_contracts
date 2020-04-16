@@ -395,6 +395,8 @@ namespace eosio {
    }
 
    void token::unregtoken( name table, symbol_code sym_code ){
+      require_auth( _self );
+
       if ( table == "accepts"_n ){
          const auto& acpt = get_currency_accept( sym_code );
          _accepts.erase( acpt );
