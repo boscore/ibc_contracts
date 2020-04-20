@@ -18,6 +18,7 @@ namespace eosio {
          contract( s, code, ds ),
          _global_state( _self, _self.value ),
          _peerchains( _self, _self.value ),
+         _freeaccount( _self, _self.value ),
          _peerchainm( _self, _self.value ),
          _accepts( _self, _self.value ),
          _stats( _self, _self.value )
@@ -844,6 +845,12 @@ namespace eosio {
             ibc_transfer = true;
          }
       }
+
+      bool from_free_account = false;
+      auto itr2 = _freeaccount.find( from_chain.value);
+      if ( itr2 != _freeaccount.end() && args.from == itr2->peerchain_account ){
+         from_free_account = true;
+      }
       
       if ( ibc_transfer ){   // issue peg token to user
          const auto& st = get_currency_stats( sym.code() );
@@ -895,7 +902,7 @@ namespace eosio {
          });
 
          int64_t diff = 0;
-         if ( to != pch.thischain_free_account ){
+         if ( to != pch.thischain_free_account && (! from_free_account) ){
             if ( acpt.service_fee_mode == "fixed"_n ){
                diff = acpt.service_fee_fixed.amount;
             } else {
@@ -929,7 +936,7 @@ namespace eosio {
 
       #ifdef HUB
       if ( _hubgs.is_open && to == _hubgs.hub_account ){
-         ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, new_quantity, memo_info.notes );
+         ibc_cash_to_hub( seq_num, from_chain, args.from, orig_trx_id, new_quantity, memo_info.notes, from_free_account );
       }
       #endif
 
@@ -1273,6 +1280,22 @@ namespace eosio {
       acnts.erase( it );
    }
 
+   void token::setfreeacnt( name peerchain_name, name account ){
+      require_auth( _self );
+
+      auto itr = _freeaccount.find( peerchain_name.value );
+      if ( itr != _freeaccount.end() ) {
+         _freeaccount.modify( itr, same_payer, [&]( auto& r ) {
+            r.peerchain_account = account;
+         });
+      } else {
+         _freeaccount.emplace( _self, [&]( auto& r ){
+            r.peerchain_name = peerchain_name;
+            r.peerchain_account = account;
+         });
+      }
+   }
+
    void token::forceinit( name peerchain_name ) {
       require_auth( _self );
 
@@ -1464,7 +1487,8 @@ namespace eosio {
                                 const name&                     from_account,
                                 const transaction_id_type&      orig_trx_id,
                                 const asset&                    quantity,
-                                const string&                   memo ){
+                                const string&                   memo,
+                                bool                            from_free_account){
 
       /// parse memo string
       string tmp_memo = memo;
@@ -1486,11 +1510,14 @@ namespace eosio {
       eosio_assert( acpt.active, "not active");
 
       int64_t diff = 0;
-      if ( acpt.service_fee_mode == "fixed"_n ){
-         diff = acpt.service_fee_fixed.amount;
-      } else {
-         diff = int64_t( quantity.amount * acpt.service_fee_ratio );
+      if ( ! from_free_account ){
+         if ( acpt.service_fee_mode == "fixed"_n ){
+            diff = acpt.service_fee_fixed.amount;
+         } else {
+            diff = int64_t( quantity.amount * acpt.service_fee_ratio );
+         }
       }
+
       eosio_assert( diff >= 0 && diff < quantity.amount, "diff >= 0 && diff < quantity.amount assert failed");
       asset mini_to_quantity{quantity.amount - diff, quantity.symbol};
 
@@ -1737,7 +1764,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)
+            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)
 #endif

@@ -226,6 +226,9 @@ namespace eosio {
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
 
+      [[eosio::action]]
+      void setfreeacnt( name peerchain_name, name account );
+
 #ifdef HUB
       [[eosio::action]]
       void hubinit( name hub_account );
@@ -261,6 +264,16 @@ namespace eosio {
    private:
       eosio::singleton< "globals"_n, global_state >   _global_state;
       global_state                                    _gstate;
+
+      // code,scope (_self,_self)
+      struct [[eosio::table("freeaccount")]] peer_chain_free_account {
+         name     peerchain_name;
+         name     peerchain_account;
+
+         uint64_t primary_key()const { return peerchain_name.value; }
+         EOSLIB_SERIALIZE( peer_chain_free_account, (peerchain_name)(peerchain_account))
+      };
+      eosio::multi_index< "freeaccount"_n, peer_chain_free_account > _freeaccount;
 
       // code,scope (_self,_self)
       struct [[eosio::table("peerchains")]] peer_chain_state {
@@ -531,7 +544,8 @@ namespace eosio {
                             const name&                     from_account,
                             const transaction_id_type&      orig_trx_id,
                             const asset&                    quantity,
-                            const string&                   memo );
+                            const string&                   memo,
+                            bool                            from_free_account);
       void ibc_transfer_from_hub( const name& to, const asset& quantity, const string& memo );
       void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
       void rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity );   // when ibc transmit fails

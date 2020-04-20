@@ -391,6 +391,15 @@ void unlockall();
  - **hub_account** the hub account. Just need this hub account to exist, no matter who has the authority, or who owns this account.
  - open the `hub` feature of ibc.token contract.
  - for more information of hub feature, please refer to [ibc_hub.md](../docs/IBC_Hub_Protocol.md).
+ 
+#### setfreeacnt
+``` 
+    void setfreeacnt( name peerchain_name, name account );
+``` 
+ - set free account of peerchains, in order to facilitate ibc heart beat transactions.
+ - **peerchain_name** peerchain name.
+ - **account** account name of the peerchain.
+
 
 Actions called by ibc_plugin
 ----------------------------
