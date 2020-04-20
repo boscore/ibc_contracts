@@ -10,6 +10,13 @@ only `ibc_plugin_eos` is needed; if you want to deploy between EOSIO chains
 whose underlying source code especially the consensus algorithem has been modified,
 it's need to determine whether those chains can use the `ibc_contracts` and `ibc_plugin_eos` according to the actual situation.
 
+Now IBC Plugin release version include:
+
+- [BOS IBC Plugin](https://github.com/boscore/ibc_plugin_bos)
+- [EOS IBC Plugin](https://github.com/boscore/ibc_plugin_eos)
+- [WAX IBC Plugin](https://github.com/boscore/ibc_plugin_wax) Tag: [ibc-v3.0.0-rc](https://github.com/boscore/ibc_plugin_wax/releases/tag/ibc-v3.0.0-rc) 
+
+
 Notes: 
 - Current BOS mainnt's consensus algorithem is 
 [batch-pbft](https://github.com/boscore/Documentation/blob/master/LIB/Algorithm_for_improving_EOSIO_consensus_speed_based_on_Batch-PBFT.md), 
@@ -28,20 +35,37 @@ Contents
 
 ### Build
 - Build contracts  
-  Please refer to [ibc_contracts](https://github.com/boscore/ibc_contracts).
+  Please refer to [ibc_contracts](https://github.com/boscore/ibc_contracts) and the [pre-build](https://github.com/boscore/bos.contract-prebuild/tree/master/bosibc) for IBC contracts.
+
   
 - Build ibc_plugin_eos and ibc_plugin_bos  
-  Please refer to [ibc_plugin_eos](https://github.com/boscore/ibc_plugin_eos) and [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos).
+  Please refer to [ibc_plugin_eos](https://github.com/boscore/ibc_plugin_eos) and [ibc_plugin_bos](https://github.com/boscore/ibc_plugin_bos). 
+  And there are Docker images you can find in the release page.
+
   
 ### Create Accounts
-four accounts need to be created on each blockchain， one relay account for ibc_plugin, two contract accounts 
-for deploying IBC contracts, and one charge free account used for ibc system monitoring. let's assume that the four accounts on both chains are:   
-**ibc3relay333**: used by ibc_plugin to push ibc related transactions, and need a certain amount of `cpu resources`, typically require 1 hour or more, and require a certain amount of `net resources`.   
-**ibc3chain333**: used to deploy ibc.chain contract, and need a certain amount of ram for tables data, typically require 5Mb or more.  
-**ibc3token333**: used to deploy ibc.token contract, and need a certain amount of ram for tables data, typically require 10Mb or more.  
+Five accounts need to be created on each blockchain:
+- one relayer account for ibc_plugin nodeos, 
+- one account to deploy `ibc.token` contract
+- one account to deploy `ibc.chain` contract
+- one account to be the administrator account for peg token which can adjust the parameters for their token, for example `min_once_transfer`
+- one account to test the IBC function free for transaction fee
+   
+For deploying IBC contracts, and one charge free account used for ibc system monitoring. let's assume that the four accounts on both chains are:   
+
+**ibc3relay333**: used by ibc_plugin to push ibc related transactions, and need a certain amount of `cpu resources`, typically require 10 minutes or more, and require a certain amount of `net resources`.   
+**ibc3chain333**: used to deploy ibc.chain contract, and need a certain amount of ram for tables data, typically require 1.3MB or more.  
+**ibc3token333**: used to deploy ibc.token contract, and need a certain amount of ram for tables data, typically require 2.5MB or more.  
 **freeaccount1**: ibc transactions to and from this account is **transaction fee free** and is used for fault monitoring of the IBC system 
 in production environment，throw sending ibc transactions regularly and check the results, avoid the need to constantly recharge this account.
+**ibc3admin333**: used to manage the configures for peg token. 
   
+Note:
+
+  The relayer account is not a must in theory, there is a `check_relay_auth` switch in code. 
+  In the future, relayer account can be disable or an optional configure.
+
+
 ### Configure and Start Relay Nodes
 Suppose the IP address and port of the relay node of Kylin testnet are 192.168.1.101:5678, 
 and node of BOS testnet are 192.168.1.102:5678
@@ -64,8 +88,6 @@ ibc-chain-contract = ibc3chain333
 ibc-relay-name = ibc3relay333
 ibc-relay-private-key = <the pulic key of ibc3relay333>=KEY:<the private key of ibc3relay333>
 
-ibc-peer-private-key = <ibc peer public key>=KEY:<ibc peer private key>
-
 # ------------------- p2p peers -------------------#
 p2p-peer-address = <Kylin testnet p2p endpoint>
 ```
@@ -86,8 +108,6 @@ ibc-chain-contract = ibc3chain333
 ibc-relay-name = ibc3relay333
 ibc-relay-private-key = <the pulic key of ibc3relay333>=KEY:<the private key of ibc3relay333>
 
-ibc-peer-private-key = <ibc peer public key>=KEY:<ibc peer private key>
-
 # ------------------- p2p peers -------------------#
 p2p-peer-address = <BOS testnet p2p endpoint>
 ```
@@ -98,6 +118,13 @@ and check the IBC contracts' status on their respective chains, and print the lo
 
 
 ### Deploy and Init IBC Contracts
+
+#### Choose the version of ibc.token
+
+For example, if we take BOS Testnet as the HUB chain, we need to deploy `HUB ibc.chain` contract which in [*_hub_ibc_token](https://github.com/boscore/bos.contract-prebuild/tree/master/bosibc/).  
+For the parallel chains, the normal [ibc.token](https://github.com/boscore/bos.contract-prebuild/tree/master/bosibc/ibc.token) should be deployed.   
+[ibc.chain](https://github.com/boscore/bos.contract-prebuild/tree/master/bosibc/ibc.token) is same for HUB chain and parallel chains.  
+
 - ibc.chain and ibc.token contracts on Kylin testnet  
 ```bash
 cleos_kylin='cleos -u <Kylin testnet http endpoint>'
@@ -111,10 +138,9 @@ $cleos_kylin set contract ${contract_token} <contract_token_folder> -x 1000 -p $
 # if check_relay_auth is set to true, relay account should be registered to allown ibc_plugin use it to push transactions.
 relay_account=ibc3relay333
 $cleos_kylin push action ${contract_chain} relay  '["add",'${relay_account}']' -p ${contract_chain}
-
 $cleos_kylin push action ${contract_chain} setglobal '["bostest","<bos testnet chain_id>","batch"]' -p ${contract_chain}
 
-$cleos_kylin set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
+$cleos_kylin set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p ${contract_token}
 $cleos_kylin push action ${contract_token} setglobal '["kylin",true]' -p ${contract_token}
 $cleos_kylin push action ${contract_token} regpeerchain '["bostest","https://bos-test.bloks.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
 ```
@@ -135,10 +161,18 @@ $cleos_bos push action ${contract_chain} relay  '["add",'${relay_account}']' -p 
 
 $cleos_bos push action ${contract_chain} setglobal '["kylin","<Kylin testnet chain_id>","pipeline"]' -p ${contract_chain}
 
-$cleos_bos set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p $ {contract_token}
+$cleos_bos set account permission ${contract_token} active '{"threshold": 1, "keys":[{"key":"'${contract_token_pubkey}'", "weight":1}], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1}], "waits":[] }' owner -p ${contract_token}
 $cleos_bos push action ${contract_token} setglobal '["bostest",true]' -p ${contract_token}
 $cleos_bos push action ${contract_token} regpeerchain '["kylin","https://www.cryptokylin.io","ibc3token333","ibc3chain333","freeaccount1",5,1000,1000,true]' -p ${contract_token}
 ```
+
+Note:
+  - The document for [ibc.token](https://github.com/boscore/ibc_contracts/tree/master/ibc.token)
+  - The document for [ibc.chain](https://github.com/boscore/ibc_contracts/tree/master/ibc.chain)
+
+#### IBC HUB chain init
+
+The HUB chain initialization [here](https://github.com/boscore/ibc_contracts/blob/master/docs/IBC_Hub_Protocol.md#hub-init)
 
 After initializing the two contracts, the relay nodes of two chains will start synchronizing a first block header of 
 each other's peer chain as a `genesis block header` of ibc.chain contract, then synchronize a batch of block headers.
@@ -173,12 +207,18 @@ $cleos_kylin push action ${contract_token} regpegtoken \
     "1000000.0000 BOS",1000,"ibc3admin333","0.1000 BOS",true]' -p ${contract_token}
 ```
 
+#### HUB chain registration
+
+For the HUB chain, there is a new function `regpegtoken2` to call one time to finsih the registration. Other parallel chains, still need to call `regpegtoken` and `regpegtoken`. Check the [detail]().
+
+
 After performing the above steps, you need to wait for a period of time, preferably more than 6 minutes, and watch the logs of the two relay nodes.
 You can see a log like the one below. It is better to wait for the last part of the following log to change from `,false]` to `,true]` for the first time before sending inber-blockchain transactions.
 
+For now, it's needed to call `regpegtoken` in every parallel chains, in the future, IBC can do it through broadcast protocol.
+
 ``` 
 ibc_plugin.cpp:3168           start_ibc_heartbeat_ ] origtrxs_table_id_range [0,0] cashtrxs_table_seq_num_range [0,0] new_producers_block_num 0, lwcls_range [75468428,75469424,true]
-
 ```
 
 ### Send IBC Transactions
