@@ -59,6 +59,9 @@ namespace eosio {
       void setglobal( name this_chain, bool active );
 
       [[eosio::action]]
+      void setadmin( name admin );
+
+      [[eosio::action]]
       void regpeerchain( name           peerchain_name,
                          string         peerchain_info,
                          name           peerchain_ibc_token_contract,
@@ -261,9 +264,18 @@ namespace eosio {
          EOSLIB_SERIALIZE( global_state, (this_chain)(active))
       };
 
+      struct [[eosio::table("admin")]] admin_struct {
+         name              admin;
+         EOSLIB_SERIALIZE( admin_struct, (admin))
+      };
+      typedef eosio::singleton< "admin"_n, admin_struct > admin_singleton;
+
+
    private:
       eosio::singleton< "globals"_n, global_state >   _global_state;
       global_state                                    _gstate;
+      eosio::singleton< "admin"_n, admin_struct >     _admin_sg;
+      admin_struct                                    _admin_st;
 
       // code,scope (_self,_self)
       struct [[eosio::table("freeaccount")]] peer_chain_free_account {
@@ -550,6 +562,8 @@ namespace eosio {
       void delete_by_hub_trx_id( const transaction_id_type& hub_trx_id );     // when successfully completed
       void rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity );   // when ibc transmit fails
 #endif
+
+      void check_admin_auth();
    };
 
 } /// namespace eosio

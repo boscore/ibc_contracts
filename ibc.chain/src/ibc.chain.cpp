@@ -11,6 +11,7 @@ namespace eosio {
 
    chain::chain( name s, name code, datastream<const char*> ds ) :contract(s,code,ds),
             _global_state(_self, _self.value),
+            _admin_sg(_self, _self.value),
             _global_mutable(_self, _self.value),
             _chaindb(_self, _self.value),
             _prodsches(_self, _self.value),
@@ -19,11 +20,13 @@ namespace eosio {
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _gmutable = _global_mutable.exists() ? _global_mutable.get() : global_mutable{};
+      _admin_st = _admin_sg.exists() ? _admin_sg.get() : admin_struct{};
    }
 
    chain::~chain() {
       _global_state.set( _gstate, _self );
       _global_mutable.set( _gmutable, _self );
+      _admin_sg.set( _admin_st , _self );
    }
 
    void chain::setglobal( name              chain_name,
@@ -36,6 +39,11 @@ namespace eosio {
       _gstate.chain_name      = chain_name;
       _gstate.chain_id        = chain_id;
       _gstate.consensus_algo  = consensus_algo;
+   }
+
+   void chain::setadmin( name admin ){
+      require_auth( _self );
+      _admin_st.admin = admin;
    }
 
    // init for both pipeline and batch light client
@@ -840,7 +848,7 @@ namespace eosio {
    // ------ force init ------ //
 
    void chain::forceinit(){
-      require_auth(_self);
+      check_admin_auth();
       while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
       while ( _sections.begin() != _sections.end() ){ _sections.erase(_sections.begin()); }
       _gmutable = global_mutable{};
@@ -869,7 +877,7 @@ namespace eosio {
    }
 
    void chain::relay( string action, name relay ) {
-      require_auth( _self );
+      check_admin_auth();
       auto existing = _relays.find( relay.value );
 
       if ( action == "add" ) {
@@ -895,6 +903,13 @@ namespace eosio {
       }
    }
 
+   void chain::check_admin_auth(){
+      if ( ! has_auth(_self) ){
+         eosio_assert( _admin_st.admin != name() && is_account( _admin_st.admin ),"admin account not exist");
+         require_auth( _admin_st.admin );
+      }
+   }
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit)(relay)(reqrelayauth) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rmfirstsctn)(pushblkcmits)(forceinit)(relay)(reqrelayauth)(setadmin) )

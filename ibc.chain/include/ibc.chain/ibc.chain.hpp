@@ -22,6 +22,12 @@ namespace eosio {
 
    const static bool     check_relay_auth = true;
 
+   struct [[eosio::table("admin"), eosio::contract("ibc.chain")]] admin_struct {
+      name              admin;
+      EOSLIB_SERIALIZE( admin_struct, (admin))
+   };
+   typedef eosio::singleton< "admin"_n, admin_struct > admin_singleton;
+
    struct [[eosio::table("global"), eosio::contract("ibc.chain")]] global_state {
       name              chain_name;       // the original chain name, ibc_plugin uses this name to interact with the ibc.token contract
       chain_id_type     chain_id;
@@ -100,6 +106,8 @@ namespace eosio {
       global_state               _gstate;
       global_mutable_singleton   _global_mutable;
       global_mutable             _gmutable;
+      admin_singleton            _admin_sg;
+      admin_struct               _admin_st;
       chaindb                    _chaindb;
       prodsches                  _prodsches;
       sections                   _sections;
@@ -113,6 +121,9 @@ namespace eosio {
       void setglobal( name              chain_name,
                       chain_id_type     chain_id,
                       name              consensus_algo );
+
+      [[eosio::action]]
+      void setadmin( name  admin );
 
       [[eosio::action]]
       void chaininit( const std::vector<char>&     header,
@@ -211,6 +222,8 @@ namespace eosio {
       capi_public_key   get_public_key_form_signature( digest_type digest, signature_type sig ) const;
 
       bool only_one_eosio_bp();
+
+      void check_admin_auth();
    };
 
 } /// namespace eosio

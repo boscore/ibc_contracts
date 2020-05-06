@@ -17,6 +17,7 @@ namespace eosio {
    token::token( name s, name code, datastream<const char*> ds ):
          contract( s, code, ds ),
          _global_state( _self, _self.value ),
+         _admin_sg(_self, _self.value),
          _peerchains( _self, _self.value ),
          _freeaccount( _self, _self.value ),
          _peerchainm( _self, _self.value ),
@@ -27,6 +28,7 @@ namespace eosio {
          #endif
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
+      _admin_st = _admin_sg.exists() ? _admin_sg.get() : admin_struct{};
       #ifdef HUB
       _hubgs = _hub_globals.exists() ? _hub_globals.get() : hub_globals{};
       #endif
@@ -34,6 +36,7 @@ namespace eosio {
 
    token::~token(){
       _global_state.set( _gstate, _self );
+      _admin_sg.set( _admin_st , _self );
       #ifdef HUB
       _hub_globals.set( _hubgs, _self );
       #endif
@@ -45,6 +48,11 @@ namespace eosio {
       _gstate.active       = active;
    }
 
+   void token::setadmin( name admin ){
+      require_auth( _self );
+      _admin_st.admin = admin;
+   }
+
    void token::regpeerchain( name           peerchain_name,
                              string         peerchain_info,
                              name           peerchain_ibc_token_contract,
@@ -54,7 +62,7 @@ namespace eosio {
                              uint32_t       max_origtrxs_table_records,
                              uint32_t       cache_cashtrxs_table_records,
                              bool           active ){
-      require_auth( _self );
+      check_admin_auth();
 
       eosio_assert( peerchain_name != name(), "peerchain_name can not be empty");
       eosio_assert( peerchain_info.size() < 256, "peerchain_info has more than 256 bytes");
@@ -95,7 +103,7 @@ namespace eosio {
    }
 
    void token::setchainbool( name peerchain_name, string which, bool value ){
-      require_auth( _self );
+      check_admin_auth();
 
       auto& chain = _peerchains.get( peerchain_name.value, "peerchain not registered");
       if ( which == "active" ){
@@ -119,7 +127,7 @@ namespace eosio {
                              double      service_fee_ratio,
                              asset       failed_fee,
                              bool        active ){
-      require_auth( _self );
+      check_admin_auth();
 
       eosio_assert( is_account( original_contract ), "original_contract account does not exist");
       eosio_assert( is_account( administrator ), "administrator account does not exist");
@@ -223,7 +231,7 @@ namespace eosio {
 
    void token::setacptint( symbol_code symcode, string which, uint64_t value ) {
       const auto& acpt = get_currency_accept( symcode );
-      require_auth( _self );
+      check_admin_auth();
 
       if ( which == "max_tfs_per_minute" ){
          eosio_assert( 1 <= value && value <= 500, "max_tfs_per_minute's value must in range [1,500]");
@@ -249,7 +257,7 @@ namespace eosio {
                            name   fee_mode,
                            asset  fee_fixed,
                            double fee_ratio ) {
-      require_auth( _self );
+      check_admin_auth();
 
       const auto& acpt = get_currency_accept( symcode );
       eosio_assert( fee_mode == "fixed"_n || fee_mode == "ratio"_n, "mode can only be fixed or ratio");
@@ -283,7 +291,7 @@ namespace eosio {
                             name        administrator,
                             asset       failed_fee,
                             bool        active ){
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( is_account( administrator ), "administrator account does not exist");
 
       eosio_assert( _accepts.find(max_supply.symbol.code().raw()) == _accepts.end(), "token symbol conflict in table 'stats' and 'accepts'");
@@ -362,7 +370,7 @@ namespace eosio {
 
    void token::setpegint( symbol_code symcode, string which, uint64_t value ) {
       const auto& st = get_currency_stats( symcode );
-      require_auth( _self );
+      check_admin_auth();
 
       if ( which == "max_wds_per_minute" ){
          eosio_assert( 1 <= value && value <= 500, "max_wds_per_minute's value must in range [1,500]");
@@ -384,7 +392,7 @@ namespace eosio {
    }
 
    void token::setpegtkfee( symbol_code symcode, asset fee) {
-      require_auth( _self );
+      check_admin_auth();
 
       const auto& st = get_currency_stats( symcode );
       eosio_assert( fee.symbol == st.supply.symbol && fee.amount >= 0, "service_fee_fixed invalid" );
@@ -396,7 +404,7 @@ namespace eosio {
    }
 
    void token::unregtoken( name table, symbol_code sym_code ){
-      require_auth( _self );
+      check_admin_auth();
 
       if ( table == "all"_n ){
          auto ptr1 = _accepts.find( sym_code.raw() );
@@ -1149,7 +1157,7 @@ namespace eosio {
 
    // this action maybe needed when repairing the ibc system manually
    void token::fcrollback( name peerchain_name, const std::vector<transaction_id_type> trxs ) {
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( trxs.size() != 0, "no transacton" );
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
 
@@ -1200,7 +1208,7 @@ namespace eosio {
    }
 
    void token::fcrmorigtrx( name peerchain_name, const std::vector<transaction_id_type> trxs ){
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( trxs.size() != 0, "no transacton" );
 
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
@@ -1212,13 +1220,13 @@ namespace eosio {
    }
 
    void token::lockall() {
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( _gstate.active == true, "_gstate.active == false, nothing to do");
       _gstate.active = false;
    }
 
    void token::unlockall() {
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( _gstate.active == false,  "_gstate.active == true, nothing to do");
       _gstate.active = true;
    }
@@ -1281,7 +1289,7 @@ namespace eosio {
    }
 
    void token::setfreeacnt( name peerchain_name, name account ){
-      require_auth( _self );
+      check_admin_auth();
 
       auto itr = _freeaccount.find( peerchain_name.value );
       if ( itr != _freeaccount.end() ) {
@@ -1297,7 +1305,7 @@ namespace eosio {
    }
 
    void token::forceinit( name peerchain_name ) {
-      require_auth( _self );
+      check_admin_auth();
 
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       auto _cashtrxs = cashtrxs_table( _self, peerchain_name.value );
@@ -1694,7 +1702,7 @@ namespace eosio {
    }
 
    void token::hubinit( name hub_account ){
-      require_auth( _self );
+      check_admin_auth();
       eosio_assert( _hubgs.is_open == false, "already init");
       _hubgs.is_open = true;
       _hubgs.hub_account = hub_account;
@@ -1722,7 +1730,7 @@ namespace eosio {
                               double      service_fee_ratio,
                               asset       failed_fee,
                               bool        active ) {
-      require_auth( _self );
+      check_admin_auth();
 
       /// --- register peg token ---
       regpegtoken(   peerchain_name,
@@ -1754,6 +1762,12 @@ namespace eosio {
 
 #endif
 
+   void token::check_admin_auth(){
+      if ( ! has_auth(_self) ){
+         eosio_assert( _admin_st.admin != name() && is_account( _admin_st.admin ),"admin account not exist");
+         require_auth( _admin_st.admin );
+      }
+   }
 } /// namespace eosio
 
 extern "C" {
@@ -1764,7 +1778,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)
+            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)
 #endif

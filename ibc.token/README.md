@@ -42,6 +42,10 @@ Actions called by administrators
     Only when _global_state.active is true can the original IBC transaction be successfully executed.
  - require auth of _self
 
+#### setadmin( admin )
+ - **admin**, admin account.
+ - require auth of _self
+ 
 #### regpeerchain
 ``` 
   void regpeerchain( name           peerchain_name,
@@ -69,7 +73,7 @@ Actions called by administrators
  - **cache_cashtrxs_table_records** maximum cashtrxs table records, the recommended value is 1000.
  - **active** set the initial active state (_peerchains.active).
     Only when _peerchains.active is true can the original IBC transaction to this peer chain be successfully executed.
- - require auth of _self
+ - require auth of _self or admin
 
 Examples:  
 The following examples assume that IBC systems are deployed between the EOS and BOS mainnet, 
@@ -90,7 +94,7 @@ void setchainbool( name peerchain_name, string which, bool value );
  - **which**, must be 'active'
  - **value**, bool value, set the active state (_peerchains.active).
    Only when _peerchains.active is true can the original IBC transaction to this peer chain be successfully executed.
- - require auth of _self
+ - require auth of _self or admin
  
 #### regacpttoken
 ``` 
@@ -125,7 +129,7 @@ This action is used to register blockchain native token, which is originally iss
  - **failed_fee** use this value to calculate fee for the filed original transaction.
  - **active** set the initial active state of this token, 
     when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **withdraw** can still execute.
- - require auth of _self
+ - require auth of _self or admin
 
 Note: from IBC version 4, the pegged token symbol must same with the original token symbol.
 
@@ -170,7 +174,7 @@ Modify only one member of type `int` in currency_accept struct.
  - **symcode** the token symbol code
  - **which** must be "max_tfs_per_minute".
  - **value** the value to be set.
- - require auth of _self
+ - require auth of _self or admin
  
 #### setacptbool
 ``` 
@@ -196,7 +200,7 @@ Modify fee related members in currency_accept struct.
  - **fee_mode** must be "fixed" or "ratio".
  - **fee_fixed** fixed fee quota, used when fee_mode == fixed
  - **fee_ratio** charge ratio, used when fee_mode == ratio
- - require auth of _self
+ - require auth of _self or admin
  
 #### regpegtoken
 ```
@@ -224,7 +228,7 @@ This action is used to register pegged token, which is originally issued on othe
  - **failed_fee** use this value to calculate fee for the filed withdraw transaction.
  - **active** set the initial active state of this pegged token, 
      when active is false, IBC withdraws are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
- - require auth of _self
+ - require auth of _self or admin
 
 ``` 
 contract_token=ibc2token555
@@ -275,7 +279,7 @@ this action equals call regpegtoken(...) firstly and then call regacpttoken(...)
  - **failed_fee** use this value to calculate fee for the filed transfer transaction.
  - **active** set the initial active state of this pegged token, 
      when active is false, IBC transfers are not allowed, but **cash**s trigger by peerchain action **transfer** can still execute.
- - require auth of _self
+ - require auth of _self or admin
 
 ``` 
 contract_token=ibc2token555
@@ -322,7 +326,7 @@ Modify only one member of type `bool` in currency_stats struct.
 Modify fee related members in currency_stats struct.
  - **symcode** the symcode of registered pegged token.
  - **fee** fixed fee quota
- - require auth of _self
+ - require auth of _self or admin
 
 #### unregtoken
 ``` 
@@ -332,7 +336,7 @@ Modify fee related members in currency_stats struct.
  - **table** table name, table name must be one of `all` ,`accepts` and `stats`, 
  when it's `all`, all records in table `accepts` or `stats` will be deleted.
  - **sym_code** token symbol code, e.g. `BOS`,`EOS`.
- - require auth of _self
+ - require auth of _self or admin
 
 #### fcrollback
 ``` 
@@ -342,7 +346,7 @@ Modify fee related members in currency_stats struct.
    used to force rollback (refund) specified original transaction records in table `origtrxs`.
  - **peerchain_name** peer chain name.
  - **trxs** original transactions that need to be rolled back.
- - require auth of _self
+ - require auth of _self or admin
 
 #### fcrmorigtrx
 ``` 
@@ -352,7 +356,7 @@ Modify fee related members in currency_stats struct.
    used to force remove specified original transaction records in table `origtrxs`.
  - **peerchain_name** peer chain name.
  - **trxs** original transactions that need to be remove.
- - require auth of _self
+ - require auth of _self or admin
  
 #### lockall
 ``` 
@@ -360,7 +364,7 @@ void lockall();
 ```
  - set 'active' of global_state false.
  - when locked, ibc-transfer and withdraw will not allowed to execute for all token.
- - require auth of _self
+ - require auth of _self or admin
  
 #### unlockall
 ``` 
@@ -368,7 +372,7 @@ void unlockall();
 ```
  - set 'active' of global_state true.
  - when unlocked, the restrictions caused by execute lockall() will be removed.
- - require auth of _self
+ - require auth of _self or admin
  
 #### forceinit
 ``` 
@@ -382,7 +386,7 @@ void unlockall();
    so if the number of records in these three tables is greater than 200, 
    you need to perform this action several times to clear all three tables.
    When the console prints "force initialization complete", it says that all three tables have been cleared.
- - require auth of _self
+ - require auth of _self or admin
 
 #### hubinit
 ```  

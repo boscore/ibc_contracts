@@ -23,12 +23,16 @@ Actions called by administrator
    must be one of `pipeline` (represent DPOS pipeline bft consensus, such as the current EOSIO mainnet consensus) 
    and `batch` (represent DPOS batch pbft consensus, such as the new BOS 3 seconds LIB consensus).
  - require auth of _self
- 
+
+#### setadmin( admin )
+ - **admin**, admin account.
+ - require auth of _self
+
 #### forceinit( )
  - three table ( _chaindb, _prodsches, _sections ) will be clear.
  - this action is needed when repairing the ibc system manually, 
    please refer to [TROUBLESHOOTING](../docs/Troubles_Shooting.md) for detailed IBC system recovery process.
- - require auth of _self
+ - require auth of _self or admin
 
 Actions called by ibc_plugin
 ----------------------------
@@ -66,7 +70,8 @@ ibc.token : `cash`,`rollback`,`rmunablerb`
 #### void relay( string action, name relay )
  - **action**, the string value must be **`add`** to add a relay to the relay set or **`remove`** to remove a relay, you can add multiple relays.
  - **relay**, the relay account.
-
+ - require auth of _self or admin
+ 
 #### void reqrelayauth( )
 This action is used to facilitate the administrator to check the value of `check_relay_auth`, because this parameter is hard coded in the code and cannot be viewed through the contract table.
 
