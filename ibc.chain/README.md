@@ -16,12 +16,14 @@ Contents
  
 Actions called by administrator
 -------------------------------
-#### setglobal( chain_name, chain_id, consensus_algo )
+#### setglobal( chain_name, chain_id, consensus_algo, wtmsig_activated, wtmsig_ext_id)
  - **chain_name**, The name of the original blockchain of this light client, such as `eos`, `bos`.
  - **chain_id**, chain id of the original blockchain of this light client.
  - **consensus_algo**, consensus algorithm of the original blockchain of this light client, 
    must be one of `pipeline` (represent DPOS pipeline bft consensus, such as the current EOSIO mainnet consensus) 
    and `batch` (represent DPOS batch pbft consensus, such as the new BOS 3 seconds LIB consensus).
+ - **wtmsig_activated**, ture if protocol wtmsig had activated. 
+ - **wtmsig_ext_id**, wtmsig extention id.   
  - require auth of _self
 
 #### setadmin( admin )
