@@ -12,6 +12,7 @@ namespace eosio {
    chain::chain( name s, name code, datastream<const char*> ds ) :contract(s,code,ds),
             _global_state(_self, _self.value),
             _admin_sg(_self, _self.value),
+            _wtmsig_sg(_self, _self.value),
             _global_mutable(_self, _self.value),
             _chaindb(_self, _self.value),
             _prodsches(_self, _self.value),
@@ -21,17 +22,21 @@ namespace eosio {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _gmutable = _global_mutable.exists() ? _global_mutable.get() : global_mutable{};
       _admin_st = _admin_sg.exists() ? _admin_sg.get() : admin_struct{};
+      _wtmsig_st = _wtmsig_sg.exists() ? _wtmsig_sg.get() : wtmsig_struct{};
    }
 
    chain::~chain() {
       _global_state.set( _gstate, _self );
       _global_mutable.set( _gmutable, _self );
       _admin_sg.set( _admin_st , _self );
+      _wtmsig_sg.set( _wtmsig_st , _self );
    }
 
    void chain::setglobal( name              chain_name,
                           chain_id_type     chain_id,
-                          name              consensus_algo ){
+                          name              consensus_algo,
+                          bool              wtmsig_activated,
+                          uint32_t          wtmsig_ext_id  ){
       require_auth( _self );
       eosio_assert( chain_name != ""_n, "chain_name can not be empty");
       eosio_assert( ! is_equal_capi_checksum256(chain_id, chain_id_type()), "chain_id can not be empty");
@@ -39,6 +44,9 @@ namespace eosio {
       _gstate.chain_name      = chain_name;
       _gstate.chain_id        = chain_id;
       _gstate.consensus_algo  = consensus_algo;
+
+      _wtmsig_st.activated = wtmsig_activated;
+      _wtmsig_st.ext_id = wtmsig_ext_id;
    }
 
    void chain::setadmin( name admin ){
@@ -70,7 +78,7 @@ namespace eosio {
       _prodsches.emplace( _self, [&]( auto& r ) {
          r.id              = active_schedule_id;
          r.schedule        = active_schedule;
-         r.schedule_hash   = get_checksum256( active_schedule );
+         r.schedule_hash   = get_schedule_hash( active_schedule );
       });
 
       auto block_signing_key = get_public_key_by_producer( active_schedule_id, header.producer );
@@ -338,7 +346,7 @@ namespace eosio {
          _prodsches.emplace( _self, [&]( auto& r ) {
             r.id              = new_schedule_id;
             r.schedule        = *header.new_producers;
-            r.schedule_hash   = get_checksum256( *header.new_producers );
+            r.schedule_hash   = get_schedule_hash( *header.new_producers );
          });
 
          if ( _prodsches.rbegin()->id - _prodsches.begin()->id >= prodsches_max_records ){
@@ -745,7 +753,7 @@ namespace eosio {
          _prodsches.emplace( _self, [&]( auto& r ) {
             r.id              = new_schedule_id;
             r.schedule        = *header.new_producers;
-            r.schedule_hash   = get_checksum256( *header.new_producers );
+            r.schedule_hash   = get_schedule_hash( *header.new_producers );
          });
 
          if ( _prodsches.rbegin()->id - _prodsches.begin()->id >= prodsches_max_records ){
@@ -908,6 +916,28 @@ namespace eosio {
          eosio_assert( _admin_st.admin != name() && is_account( _admin_st.admin ),"admin account not exist");
          require_auth( _admin_st.admin );
       }
+   }
+
+   digest_type chain::get_schedule_hash( producer_schedule schedule ){
+      if ( _wtmsig_st.activated ){
+         producer_authority_schedule auth_schedule;
+         auth_schedule.version = schedule.version;
+
+         for ( auto& producer : schedule.producers ){
+            producer_authority prod_auth;
+            prod_auth.producer_name = producer.producer_name;
+            block_signing_authority_v0 sign_auth;
+            sign_auth.threshold = 1;
+            sign_auth.keys.emplace_back(key_weight{producer.block_signing_key,1});
+            prod_auth.authority = sign_auth;
+            auth_schedule.producers.emplace_back(prod_auth);
+         }
+
+         return get_checksum256( auth_schedule );
+      } else {
+         return get_checksum256( schedule );
+      }
+
    }
 
 } /// namespace eosio

@@ -100,6 +100,13 @@ namespace eosio {
    };
    typedef eosio::multi_index< "relays"_n, relay_account > relays;
 
+   struct [[eosio::table("wtmsig"), eosio::contract("ibc.chain")]] wtmsig_struct {
+      bool              activated = false;
+      uint16_t          ext_id;
+      EOSLIB_SERIALIZE( wtmsig_struct, (activated)(ext_id))
+   };
+   typedef eosio::singleton< "wtmsig"_n, wtmsig_struct > wtmsig_singleton;
+
    class [[eosio::contract("ibc.chain")]] chain : public contract {
    private:
       global_state_singleton     _global_state;
@@ -108,6 +115,8 @@ namespace eosio {
       global_mutable             _gmutable;
       admin_singleton            _admin_sg;
       admin_struct               _admin_st;
+      wtmsig_singleton           _wtmsig_sg;
+      wtmsig_struct              _wtmsig_st;
       chaindb                    _chaindb;
       prodsches                  _prodsches;
       sections                   _sections;
@@ -120,7 +129,9 @@ namespace eosio {
       [[eosio::action]]
       void setglobal( name              chain_name,
                       chain_id_type     chain_id,
-                      name              consensus_algo );
+                      name              consensus_algo,
+                      bool              wtmsig_activated,
+                      uint32_t          wtmsig_ext_id );
 
       [[eosio::action]]
       void setadmin( name  admin );
@@ -224,6 +235,8 @@ namespace eosio {
       bool only_one_eosio_bp();
 
       void check_admin_auth();
+
+      digest_type get_schedule_hash( producer_schedule new_producers );
    };
 
 } /// namespace eosio

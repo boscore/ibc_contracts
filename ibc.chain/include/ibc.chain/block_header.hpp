@@ -38,6 +38,32 @@ namespace eosio {
       EOSLIB_SERIALIZE_DERIVED( signed_block_header, block_header, (producer_signature) )
    };
 
+   struct key_weight {
+      public_key        key;
+      uint16_t          weight;
+      EOSLIB_SERIALIZE( key_weight, (key)(weight) )
+   };
+
+   struct block_signing_authority_v0 {
+      uint32_t                   threshold;
+      std::vector<key_weight>    keys;
+      EOSLIB_SERIALIZE( block_signing_authority_v0, (threshold)(keys) )
+   };
+
+   using block_signing_authority = std::variant<block_signing_authority_v0>;
+
+   struct producer_authority {
+      name                    producer_name;
+      block_signing_authority authority;
+      EOSLIB_SERIALIZE( producer_authority, (producer_name)(authority) )
+   };
+
+   struct producer_authority_schedule {
+      uint32_t                            version;
+      std::vector<producer_authority>     producers;
+      EOSLIB_SERIALIZE( producer_authority_schedule, (version)(producers) )
+   };
+
 } /// namespace eosio
 
 
