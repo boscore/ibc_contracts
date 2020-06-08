@@ -73,6 +73,72 @@ namespace eosio {
    };
    typedef eosio::multi_index< "prodsches"_n, producer_schedule_type >  prodsches;
 
+
+
+   struct [[eosio::table("wtmsig"), eosio::contract("ibc.chain")]] wtmsig_struct {
+      bool              activated = false;
+      uint16_t          ext_id;
+      EOSLIB_SERIALIZE( wtmsig_struct, (activated)(ext_id))
+   };
+   typedef eosio::singleton< "wtmsig"_n, wtmsig_struct > wtmsig_singleton;
+
+   using weight_type = uint16_t;
+
+   struct key_weight {
+      public_key_type key;
+      weight_type     weight;
+
+      friend bool operator == ( const key_weight& lhs, const key_weight& rhs ) {
+         return tie( lhs.key, lhs.weight ) == tie( rhs.key, rhs.weight );
+      }
+   };
+
+   struct block_signing_authority_v0 {
+      uint32_t             threshold;
+      vector<key_weight>   keys;
+   }
+
+   using block_signing_authority = std::variant<block_signing_authority_v0>;
+
+   struct block_header_extension_types {
+      using block_header_extension_t = fc::static_variant< Ts... >;
+      using decompose_t = decompose< Ts... >;
+   };
+
+   using block_header_extension = block_header_extension_types::block_header_extension_t;
+
+   struct producer_authority {
+      name                    producer_name;
+      block_signing_authority authority;
+   }
+
+   struct producer_authority_schedule {
+      uint32_t                         version;
+      vector<producer_authority>       producers;
+   };
+
+   struct [[eosio::table("chaindbex"), eosio::contract("ibc.chain")]] block_header_state_ex {
+      uint64_t                                     block_num;
+      block_signing_authority                      valid_block_signing_authority;   // redundant, used for make signature verification faster
+      vector<signature_type>                       additional_signatures;
+      std::map<uint16_t, block_header_extension>   header_exts;
+
+      uint64_t primary_key()const { return block_num; }
+      EOSLIB_SERIALIZE( block_header_state_ex, (block_num)(valid_block_signing_authority)(additional_signatures)(header_exts) )
+   };
+   typedef eosio::multi_index< "chaindbex"_n, block_header_state_ex > chaindbex;
+
+   struct [[eosio::table("prodsches2"), eosio::contract("ibc.chain")]] producer_schedule_type2 {
+      uint64_t                      id;
+      producer_authority_schedule   schedule;
+      digest_type                   schedule_hash;
+
+      uint64_t primary_key()const { return id; }
+      EOSLIB_SERIALIZE( producer_schedule_type2, (id)(schedule)(schedule_hash) )
+   };
+   typedef eosio::multi_index< "prodsches2"_n, producer_schedule_type2 >  prodsches2;
+
+
    struct [[eosio::table("sections"), eosio::contract("ibc.chain")]] section_type {
       uint64_t                first;
       uint64_t                last;
@@ -108,8 +174,12 @@ namespace eosio {
       global_mutable             _gmutable;
       admin_singleton            _admin_sg;
       admin_struct               _admin_st;
+      wtmsig_singleton           _wtmsig_sg;
+      wtmsig_struct              _wtmsig_st;
       chaindb                    _chaindb;
+      chaindbex                  _chaindbex;
       prodsches                  _prodsches;
+      prodsches2                 _prodsches2;
       sections                   _sections;
       relays                     _relays;
 
@@ -120,16 +190,25 @@ namespace eosio {
       [[eosio::action]]
       void setglobal( name              chain_name,
                       chain_id_type     chain_id,
-                      name              consensus_algo );
+                      name              consensus_algo,
+                      bool              wtmsig_activated );
 
       [[eosio::action]]
       void setadmin( name  admin );
 
+      /// called when the parachain's wtmsig protocol is not activated.
       [[eosio::action]]
       void chaininit( const std::vector<char>&     header,
                       const producer_schedule&     active_schedule,
                       const incremental_merkle&    blockroot_merkle,
                       const name&                  relay );
+
+      /// called when the parachain's wtmsig protocol has activated.
+      [[eosio::action]]
+      void chaininit2( const std::vector<char>&                header,
+                       const producer_authority_schedule&      active_schedule,
+                       const incremental_merkle&               blockroot_merkle,
+                       const name&                             relay );
 
       // push a batch of blocks, called by ibc plugin, used under pipeline consensus algorithm
       [[eosio::action]]
@@ -220,6 +299,12 @@ namespace eosio {
                                                    const capi_signature& signature,
                                                    const capi_public_key& pub_key ) const;
       capi_public_key   get_public_key_form_signature( digest_type digest, signature_type sig ) const;
+
+      block_signing_authority_v0   get_authority_by_producer( uint64_t id, const name& producer ) const;
+      void              assert_producer_authority( const digest_type& digest,
+                                                   const vector<capi_signature>& signatures,
+                                                   const block_signing_authority_v0& sign_auth ) const;
+
 
       bool only_one_eosio_bp();
 

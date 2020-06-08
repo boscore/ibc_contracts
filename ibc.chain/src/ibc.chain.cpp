@@ -21,17 +21,20 @@ namespace eosio {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _gmutable = _global_mutable.exists() ? _global_mutable.get() : global_mutable{};
       _admin_st = _admin_sg.exists() ? _admin_sg.get() : admin_struct{};
+      _wtmsig_st = _wtmsig_sg.exists() ? _wtmsig_sg.get() : wtmsig_struct{};
    }
 
    chain::~chain() {
       _global_state.set( _gstate, _self );
       _global_mutable.set( _gmutable, _self );
       _admin_sg.set( _admin_st , _self );
+      _wtmsig_sg.set( _wtmsig_st , _self );
    }
 
    void chain::setglobal( name              chain_name,
                           chain_id_type     chain_id,
-                          name              consensus_algo ){
+                          name              consensus_algo,
+                          bool              wtmsig_activated ){
       require_auth( _self );
       eosio_assert( chain_name != ""_n, "chain_name can not be empty");
       eosio_assert( ! is_equal_capi_checksum256(chain_id, chain_id_type()), "chain_id can not be empty");
@@ -39,6 +42,8 @@ namespace eosio {
       _gstate.chain_name      = chain_name;
       _gstate.chain_id        = chain_id;
       _gstate.consensus_algo  = consensus_algo;
+
+      _wtmsig_st.activated = wtmsig_activated;
    }
 
    void chain::setadmin( name admin ){
@@ -51,6 +56,8 @@ namespace eosio {
                           const producer_schedule&      active_schedule,
                           const incremental_merkle&     blockroot_merkle,
                           const name&                   relay ) {
+      eosio_assert( ! _wtmsig_st.activated, "wtmsig_st.activated must be false");
+
       if ( has_auth(_self) ){
          while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
          while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
@@ -110,6 +117,90 @@ namespace eosio {
          r = std::move( sct );
       });
    }
+
+   void chain::chaininit2( const std::vector<char>&                header,
+                           const producer_authority_schedule&      active_schedule,
+                           const incremental_merkle&               blockroot_merkle,
+                           const name&                             relay ){
+      eosio_assert( _wtmsig_st.activated, "wtmsig_st.activated must be true");
+
+      if ( has_auth(_self) ){
+         while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
+         while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
+         while ( _chaindbex.begin() != _chaindbex.end() ){ _chaindbex.erase(_chaindbex.begin()); }
+         while ( _prodsches2.begin() != _prodsches2.end() ){ _prodsches2.erase(_prodsches2.begin()); }
+         while ( _sections.begin() != _sections.end() ){ _sections.erase(_sections.begin()); }
+         _gmutable = global_mutable{};
+      } else {
+         eosio_assert( _chaindb.begin() == _chaindb.end() &&
+                       _prodsches.begin() == _prodsches.end() &&
+                       _chaindbex.begin() == _chaindbex.end() &&
+                       _prodsches2.begin() == _prodsches2.end() &&
+                       _sections.begin() == _sections.end() &&
+                       _gmutable.last_anchor_block_num == 0, "the light client has already been initialized" );
+         require_relay_auth( _self, relay );
+      }
+
+      const signed_block_header& header = unpack<signed_block_header>( header_data );
+
+      auto active_schedule_id = 1;
+      _prodsches.emplace( _self, [&]( auto& r ) {
+         r.id              = active_schedule_id;
+         r.schedule        = active_schedule;
+         r.schedule_hash   = get_checksum256( active_schedule );
+      });
+
+      auto header_block_num = header.block_num();
+
+      block_header_state bhs;
+      bhs.block_num             = header_block_num;
+      bhs.block_id              = header.id();
+      bhs.header                = header;
+
+      /** In this function, block_header_state's pending_schedule version must equal to active_schedule version
+      for this block cannot be a block in the process of BPs replacement. */
+      bhs.active_schedule_id    = active_schedule_id;
+      bhs.pending_schedule_id   = active_schedule_id;
+      bhs.blockroot_merkle      = blockroot_merkle;
+      bhs.is_anchor_block       = true;
+
+      auto dg = bhs_sig_digest( bhs );
+
+
+      auto block_signing_key = get_authority_by_producer( active_schedule_id, header.producer );
+
+      bhs.block_signing_key     = block_signing_key;
+      assert_producer_signature( dg, header.producer_signature, block_signing_key );
+
+      _chaindb.emplace( _self, [&]( auto& r ) {
+         r = std::move( bhs );
+      });
+
+      section_type sct;
+      sct.first              = header_block_num;
+      sct.last               = header_block_num;
+      sct.valid              = false;
+
+      if ( _gstate.consensus_algo == "batch"_n )
+         sct.valid = true;
+
+      sct.add( header.producer, header_block_num );
+
+      _sections.emplace( _self, [&]( auto& r ) {
+         r = std::move( sct );
+      });
+   }
+
+
+
+
+
+
+
+
+
+
+
 
 
    // ------ section related functions ------ //
@@ -909,6 +1000,18 @@ namespace eosio {
          require_auth( _admin_st.admin );
       }
    }
+
+
+
+
+
+
+
+
+
+
+
+
 
 } /// namespace eosio
 
