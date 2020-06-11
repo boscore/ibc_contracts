@@ -475,7 +475,7 @@ namespace eosio {
          info.notes = "";
       } else {
          info.peerchain = name( memo.substr(0,pos) );
-         info.notes = memo.substr( pos + 1 );
+         info.notes = memo.substr( pos ); // important: not + 1
          trim( info.notes );
       }
 
