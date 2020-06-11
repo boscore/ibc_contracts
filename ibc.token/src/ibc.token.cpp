@@ -469,7 +469,7 @@ namespace eosio {
       trim( memo );
 
       // --- get chain name and notes ---
-      pos = memo.find_first_not_of("abcdefghijklmnopqrstuvwxyz");
+      pos = memo.find_first_not_of("abcdefghijklmnopqrstuvwxyz012345");
       if ( pos == std::string::npos ){
          info.peerchain = name( memo );
          info.notes = "";
