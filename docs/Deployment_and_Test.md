@@ -254,3 +254,7 @@ After executing above commands, you need to wait for a period of time to receive
 It takes about six minutes to transfer from Kylin to BOS, and transfer from BOS to Kylin takes about 10 seconds.
 
 IBC transactions can be processed concurrently, that is, new ibc transactions can be sent without waiting for the previous ibc transactions to be completed.
+
+### Others
+
+Pleas read [BOSIBC_Cmdline_Demo](./BOSIBC_Cmdline_Demo.md) to get a more detail and clear understanding.

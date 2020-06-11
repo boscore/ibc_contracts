@@ -63,6 +63,7 @@ testing inter-blockchain token transfers in the bash scripts.
  - [Token_Registration_and_Management](./docs/Token_Registration_and_Management.md) 
    Explains how to register a `token` in the IBC contracts to circulate on the two blockchains.
  - [Deployment_and_Test](./docs/Deployment_and_Test.md) Explains how to deploy and test the IBC system.
+ - [BOSIBC_Cmdline_Demo](./docs/BOSIBC_Cmdline_Demo.md) Give a guide to register a parallel chain an token.
  - [IBC_Hub_Protocol](./docs/IBC_Hub_Protocol.md) Explains the hub protocol, and how to use it.
  - [Upgrade_v3_to_v4.md](./docs/Upgrade_v3_to_v4.md)
  - [Trouble_Shooting](docs/Troubles_Shooting.md) Explains how to troubleshooting when IBC system encounters problems.
