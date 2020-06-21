@@ -69,7 +69,7 @@ yascleos push action ${contract_token} setglobal '['${p_chain}',true]' -p ${cont
 params='["bos","'${bos_organization}'","bosibc.io","'${contract_chain}'","'${ibc_free_act}'",5,1000,1000,true]'
 yascleos push action ${contract_token} regpeerchain "${params}" -p ${contract_token}
 
-# set administrator after the permission resign
+# set administrator before the permission resign
 yascleos push action ${contract_token} setadmin '['${yas_admin_act}']' -p ${contract_token}
 yascleos push action ${contract_chain} setadmin '['${yas_admin_act}']' -p ${contract_chain}
 ```
@@ -207,4 +207,18 @@ cleos push action ${peerchain_contract} transfer '[ "YOU_EOS_ACT", "bosibc.io","
 
 # transfer TPT from EOS to TELOS
 cleos push action ${peerchain_contract} transfer '[ "YOU_EOS_ACT", "bosibc.io","10.0000 TPT", "hub.io@bos >> YOUR_ACT_BOS@bos Hello TELOS" ]' -p YOU_EOS_ACT@active
+```
+
+## Resign the IBC account permission into eosio.prods
+## 将 IBC 账户的权限指定给 eosio.prods
+```
+# for contract_token
+yascleos set account permission ${contract_token} active '{"threshold": 1, "keys":[], "accounts":[ {"permission":{"actor":"'${contract_token}'","permission":"eosio.code"},"weight":1},{"permission":{"actor":"eosio.prods","permission":"active"},"weight":1}], "waits":[] }' owner -p ${contract_token}
+
+yascleos set account permission ${contract_token} owner '{"threshold": 1, "keys":[], "accounts":[{"permission":{"actor":"eosio.prods","permission":"active"},"weight":1}], "waits":[] }' -p ${contract_token}@owner
+
+# for contract_chain
+yascleos set account permission ${contract_chain} active '{"threshold": 1, "keys":[], "accounts":[{"permission":{"actor":"eosio.prods","permission":"active"},"weight":1}], "waits":[] }' owner -p ${contract_chain}
+
+yascleos set account permission ${contract_chain} owner '{"threshold": 1, "keys":[], "accounts":[{"permission":{"actor":"eosio.prods","permission":"active"},"weight":1}], "waits":[] }' -p ${contract_chain}@owner
 ```
