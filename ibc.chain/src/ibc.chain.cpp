@@ -173,12 +173,17 @@ namespace eosio {
    /**
     * Notes:
     * the last section must be valid
-    * the header should not have header.new_producers and schedule_version consist with the last valid lwc section
+    * the header should not have new_producers and schedule_version consist with the last valid lwc section
     * the header block number should greater then the last block number of last section
     */
    void chain::new_section( const signed_block_header& header,
                            const incremental_merkle&  blockroot_merkle ){
-      eosio_assert( !header.new_producers, "section root header can not contain new_producers" );
+
+      auto new_producers = header.new_producers;
+      if ( _wtmsig_st.activated ){
+         new_producers = header.get_ext_new_producers( _wtmsig_st.ext_id );
+      }
+      eosio_assert( ! new_producers, "section root header can not contain new_producers" );
 
       auto header_block_num = header.block_num();
 
@@ -333,9 +338,14 @@ namespace eosio {
          bhs.pending_schedule_id = last_bhs.pending_schedule_id;
       }
 
-      // handle header.new_producers
-      if ( header.new_producers ){  // has new producers
-         eosio_assert( header.new_producers->version == header.schedule_version + 1, " header.new_producers version invalid" );
+      auto new_producers = header.new_producers;
+      if ( _wtmsig_st.activated ){
+         new_producers = header.get_ext_new_producers( _wtmsig_st.ext_id );
+      }
+
+      // handle new_producers
+      if ( new_producers ){  // has new producers
+         eosio_assert( new_producers->version == header.schedule_version + 1, "new_producers version invalid" );
 
          _sections.modify( last_section, same_payer, [&]( auto& r ) {
             r.valid = false;
@@ -345,8 +355,8 @@ namespace eosio {
          auto new_schedule_id = _prodsches.available_primary_key();
          _prodsches.emplace( _self, [&]( auto& r ) {
             r.id              = new_schedule_id;
-            r.schedule        = *header.new_producers;
-            r.schedule_hash   = get_schedule_hash( *header.new_producers );
+            r.schedule        = *new_producers;
+            r.schedule_hash   = get_schedule_hash( *new_producers );
          });
 
          if ( _prodsches.rbegin()->id - _prodsches.begin()->id >= prodsches_max_records ){
@@ -626,7 +636,7 @@ namespace eosio {
       push_header( headers.front(), blockroot_merkle );
       headers.erase( headers.begin() );
       for ( const auto & header : headers ){
-         eosio_assert( !header.new_producers,"only the first block header can contain new_producers");
+         eosio_assert( !header.new_producers,"only the first block header can contain new_producers"); // bos chain
          remove_header_if_exist( header.block_num() );
          push_header( header );
       }
@@ -746,14 +756,19 @@ namespace eosio {
       }
       bhs.pending_schedule_id = last_bhs.pending_schedule_id;
 
-      if ( header.new_producers ){
-         eosio_assert( header.new_producers->version == header.schedule_version + 1, " header.new_producers version invalid" );
+      auto new_producers = header.new_producers;
+      if ( _wtmsig_st.activated ){
+         new_producers = header.get_ext_new_producers( _wtmsig_st.ext_id );
+      }
+
+      if ( new_producers ){
+         eosio_assert( new_producers->version == header.schedule_version + 1, "new_producers version invalid" );
 
          auto new_schedule_id = _prodsches.available_primary_key();
          _prodsches.emplace( _self, [&]( auto& r ) {
             r.id              = new_schedule_id;
-            r.schedule        = *header.new_producers;
-            r.schedule_hash   = get_schedule_hash( *header.new_producers );
+            r.schedule        = *new_producers;
+            r.schedule_hash   = get_schedule_hash( *new_producers );
          });
 
          if ( _prodsches.rbegin()->id - _prodsches.begin()->id >= prodsches_max_records ){

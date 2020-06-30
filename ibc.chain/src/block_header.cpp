@@ -55,4 +55,22 @@ namespace eosio {
       return u.result;
    }
 
+   std::optional<eosio::producer_schedule> block_header::get_ext_new_producers( uint16_t new_prd_ext_id ) const {
+      for ( auto ext : header_extensions ){
+         if ( std::get<0>(ext) == new_prd_ext_id ){
+            producer_schedule_change_extension sche_ext = unpack<producer_schedule_change_extension>( std::get<1>(ext) );
+
+            producer_schedule downgraded_producers;
+            downgraded_producers.version = sche_ext.version;
+            for (const auto &p : sche_ext.producers) {
+               std::visit([&downgraded_producers, &p](const auto& auth){
+                  downgraded_producers.producers.emplace_back(producer_key{p.producer_name, auth.keys.front().key});
+               }, p.authority);
+            }
+            return downgraded_producers;
+         }
+      }
+      return std::optional<eosio::producer_schedule>();
+   }
+
 } /// namespace eosio

@@ -12,6 +12,9 @@
 
 namespace eosio {
 
+   // typedef std::tuple<uint16_t, std::vector<char>> extension;
+   // typedef std::vector<extension> extensions_type;
+
    struct block_header {
       block_timestamp                           timestamp;
       name                                      producer;
@@ -27,6 +30,7 @@ namespace eosio {
       block_id_type        id() const;
       uint32_t             block_num() const { return num_from_id(previous) + 1; }
       static uint32_t      num_from_id(const capi_checksum256& id);
+      std::optional<eosio::producer_schedule> get_ext_new_producers( uint16_t ext_id ) const;
 
       EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
          (schedule_version)(new_producers)(header_extensions))
@@ -62,6 +66,11 @@ namespace eosio {
       uint32_t                            version;
       std::vector<producer_authority>     producers;
       EOSLIB_SERIALIZE( producer_authority_schedule, (version)(producers) )
+   };
+
+   struct producer_schedule_change_extension : producer_authority_schedule {
+      static constexpr uint16_t extension_id() { return 1; }
+      EOSLIB_SERIALIZE_DERIVED( producer_schedule_change_extension, producer_authority_schedule, )
    };
 
 } /// namespace eosio
