@@ -69,7 +69,7 @@ It takes so long time to wait when transfer form EOS mainnet to BOS mainet,
 because the consensus of EOS mainnet is pipeline-pbft, and it need long time to let a block inter LIB,
 but only 10 seconds to wait when transfer form BOS mainnet to EOS miannet, 
 because BOS use a very fast finality consensus algorithem, that's batch-pbft.
-for more IBC theory please refer to [EOSIO IBC Priciple and Design](../../Documentation/IBC/EOSIO_IBC_Priciple_and_Design.md).
+for more IBC theory please refer to [EOSIO IBC Priciple and Design](https://github.com/boscore/Documentation/blob/master/IBC/EOSIO_IBC_Priciple_and_Design.md).
 
 So users can transfer assets across the chains by using any existing mobile app eosio wallets, 
 the existing wallets only need to support the ibc.token contract, because the transfer action interface definition of ibc.token 
