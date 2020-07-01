@@ -648,6 +648,18 @@ namespace eosio {
       if (  to == _self && memo.find("local") != 0 ) {   /// @tag 1: important 'to == _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
+
+         if ( info.peerchain == _gstate.this_chain ){
+            eosio_assert( _stats.find(sym.raw()) != _stats.end(), "token symbol not found in table stats");
+            require_recipient( from );
+            require_recipient( info.receiver );
+
+            auto payer = has_auth( info.receiver ) ? info.receiver : from;
+            sub_balance( from, quantity );
+            add_balance( info.receiver, quantity, payer );
+            return;
+         }
+
          auto pch = _peerchains.get( info.peerchain.value, "peerchain not registered");
          eosio_assert( pch.active, "peer chain is not active");
 
