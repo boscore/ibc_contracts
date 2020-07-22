@@ -17,7 +17,7 @@ ibc.proxy账户权限需要和ibc.token一样，resign给多个权威账户，�
 ``` 
 
 ```
-transfer非`bosibc.io`合约（假设为xxx.token合约，后同）内发行的token
+transfer 某个`token`合约（假设为xxx.token合约，可以使bosibc.io）内发行的token
 如果不适用ibc.proxy账户，your inline action or defered action should do like bellow 
 
 `inline action`
@@ -32,18 +32,24 @@ not send defered action/transactions in this way, for there is no related data i
 so instead your inline action should do like bellow
 
 
-<span style="color:blue">some *This is Blue italic.* text</span>
-
-
 `inline action`
 ``` 
-call contract `xxx.token`'s action `transfer` with parameters `<from>  proxy2bosibc <quantity> <account@chain notes string>`, 
+call contract `xxx.token`'s action `transfer` with parameters `<from>  proxy2bosibc <quantity> <account@chain notes-string>`, 
 ```
 then anyone or the relay accounts can send another transaction which contail only one action like bellow:
 
-Transaction
+`Transaction`
 ```
-call contract `xxx.token`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes string>`, 
+call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string p_orig_account=<original account>  p_orig_trx_id=<trx id> >`
 ```
 
-then your asset
+when sended, remove record.
+
+
+### actions
+
+transfer_notify(from some token's contract action transfer)
+
+rollback_notity(from bosibc.io action rollback)
+
+tansfer
