@@ -1550,8 +1550,9 @@ namespace eosio {
 
       /// record to hub table
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto p_id = _hubtrxs.available_primary_key();
       _hubtrxs.emplace( _self, [&]( auto& r ) {
-         r.cash_seq_num       = cash_seq_num;
+         r.id                 = p_id; /// can not use cash_seq_num,
          r.cash_time_slot     = get_block_time_slot();
          r.from_chain         = from_chain;
          r.from_account       = from_account;

@@ -525,7 +525,7 @@ namespace eosio {
       
       // code,scope(_self,_self.value)
       struct [[eosio::table]] hub_trx_info {
-         uint64_t              cash_seq_num; // set by seq_num in cash action
+         uint64_t              id; // set by seq_num in cash action
          uint64_t              cash_time_slot;
          name                  from_chain;
          name                  from_account;
@@ -542,7 +542,7 @@ namespace eosio {
          uint8_t               forward_times;
          uint8_t               backward_times;
 
-         uint64_t primary_key()const { return cash_seq_num; }
+         uint64_t primary_key()const { return id; }
          fixed_bytes<32> by_orig_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
          fixed_bytes<32> by_hub_trx_id()const { return fixed_bytes<32>(hub_trx_id.hash); }
       };
