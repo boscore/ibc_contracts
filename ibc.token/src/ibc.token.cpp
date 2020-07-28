@@ -1084,7 +1084,7 @@ namespace eosio {
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
       print( memo.c_str() );
 
-      asset final_quantity;
+      asset final_quantity(0,action_info.quantity.symbol);
 
       bool ibc_withdraw = false;
       auto sym_code_raw = action_info.quantity.symbol.code().raw();
@@ -1662,9 +1662,13 @@ namespace eosio {
    void token::rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity ){
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
-      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      const auto& hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
-         auto mini_to_quantity = quantity - (hub_trx_p->from_quantity - hub_trx_p->mini_to_quantity);
+         auto diff = hub_trx_p->from_quantity - hub_trx_p->mini_to_quantity;
+         auto mini_to_quantity = quantity;
+         if ( quantity.amount > diff.amount ){
+            mini_to_quantity = quantity - diff;
+         }
 
          _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
             r.from_quantity      = quantity;
