@@ -371,7 +371,6 @@ namespace eosio {
          indexed_by<"origcontract"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_original_contract> >
       > _accepts;
       const currency_accept& get_currency_accept( symbol_code symcode );
-      const currency_accept& get_currency_accept_by_orig_contract( name contract );
 
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_stats {

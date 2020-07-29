@@ -1094,7 +1094,7 @@ namespace eosio {
       }
 
       if ( ! ibc_withdraw ){  // rollback ibc transfer
-         const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
+         const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= action_info.quantity;
             r.total_transfer -= action_info.quantity;
@@ -1145,7 +1145,7 @@ namespace eosio {
       #endif
    }
 
-   static const uint32_t min_distance = 3600 * 24 * 2;   // one day
+   static const uint32_t min_distance = 3600 * 24 * 2 * 14;   // one day * 14 = 2 weeks
    void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay ){
       auto pch = _peerchains.get( peerchain_name.value );
       chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
@@ -1186,7 +1186,7 @@ namespace eosio {
          }
 
          if ( ! ibc_withdraw ){  // rollback ibc transfer
-            const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
+            const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
                r.accept -= action_info.quantity;
                r.total_transfer -= action_info.quantity;
@@ -1359,11 +1359,6 @@ namespace eosio {
    }
 
    // ---- currency_accept related methods ----
-   const token::currency_accept& token::get_currency_accept_by_orig_contract( name contract ){
-      auto idx = _accepts.get_index<"origcontract"_n>();
-      return idx.get( contract.value, "token of contract does not support" );
-   }
-
    const token::currency_accept& token::get_currency_accept( symbol_code symcode ){
       return _accepts.get( symcode.raw(), "token with symbol does not support" );
    }
