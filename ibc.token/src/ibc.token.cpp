@@ -1696,8 +1696,10 @@ namespace eosio {
          ibc_withdraw = true;
       }
 
+      const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
+      require_auth( acpt.administrator );
+
       if ( ! ibc_withdraw ){  // rollback ibc transfer
-         const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= hub_trx_p->to_quantity;
             r.total_transfer -= hub_trx_p->to_quantity;
