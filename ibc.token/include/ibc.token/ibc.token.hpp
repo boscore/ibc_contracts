@@ -239,6 +239,9 @@ namespace eosio {
       // inline action
       [[eosio::action]] /// used to support blockchain browser display detail information
       void feetransfer( name from, name to, asset quantity, string memo );
+
+      [[eosio::action]]
+      void rbkdiehubtrx( const transaction_id_type& hub_trx_id );
 #endif
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {

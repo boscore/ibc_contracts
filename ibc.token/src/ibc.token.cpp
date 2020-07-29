@@ -1145,7 +1145,7 @@ namespace eosio {
       #endif
    }
 
-   static const uint32_t min_distance = 3600 * 24 * 2 * 14;   // one day * 14 = 2 weeks
+   static const uint32_t min_distance = 3600 * 24 * 2 * 7;   // one day * 7 = one week
    void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay ){
       auto pch = _peerchains.get( peerchain_name.value );
       chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
@@ -1676,6 +1676,61 @@ namespace eosio {
       }
    }
 
+   void token::rbkdiehubtrx( const transaction_id_type& hub_trx_id ){
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
+      const auto& hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      eosio_assert(hub_trx_p != idx.end(), "hub_trx_id not exist!");
+
+      auto _origtrxs = origtrxs_table( _self, hub_trx_p->to_chain.value );
+      auto idx2 = _origtrxs.get_index<"trxid"_n>();
+      auto it = idx2.find( fixed_bytes<32>(hub_trx_id.hash) );
+      eosio_assert( it == idx2.end(), "original trx still exist!");
+
+      string memo = "rollback hub transaction: " + capi_checksum256_to_string(hub_trx_id);
+
+      bool ibc_withdraw = false;
+      auto sym_code_raw = hub_trx_p->to_quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
+      if ( itr != _stats.end() && hub_trx_p->to_chain == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ! ibc_withdraw ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= hub_trx_p->to_quantity;
+            r.total_transfer -= hub_trx_p->to_quantity;
+            r.total_transfer_times -= 1;
+         });
+
+         if ( acpt.original_contract == _self ){
+            transfer_action_type action_data{ _self, _hubgs.hub_account, hub_trx_p->to_quantity, memo };
+            action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+         }
+      } else { // rollback ibc withdraw
+         const auto& st = get_currency_stats( hub_trx_p->to_quantity.symbol.code() );
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.supply += hub_trx_p->to_quantity;
+            r.max_supply += hub_trx_p->to_quantity;
+            r.total_withdraw -= hub_trx_p->to_quantity;
+            r.total_withdraw_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, _hubgs.hub_account, hub_trx_p->to_quantity, memo };
+         action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+
+         update_stats2( st.supply.symbol.code() );
+      }
+
+      _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+         r.to_quantity.amount = 0;
+         r.fee_receiver       = name();
+         r.hub_trx_id         = capi_checksum256();
+         r.hub_trx_time_slot  = 0;
+      });
+   }
+
    void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
@@ -1792,7 +1847,7 @@ extern "C" {
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
 #ifdef HUB
-            (hubinit)(feetransfer)(regpegtoken2)
+            (hubinit)(feetransfer)(regpegtoken2)(rbkdiehubtrx)
 #endif
             )
          }
