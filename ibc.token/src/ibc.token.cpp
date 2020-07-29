@@ -649,7 +649,7 @@ namespace eosio {
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
 
-         if ( info.peerchain == _gstate.this_chain ){
+         if ( info.peerchain == _gstate.this_chain ){ // The purpose of this logic is to unify the action call format
             eosio_assert( _stats.find(sym.raw()) != _stats.end(), "token symbol not found in table stats");
             require_recipient( from );
             require_recipient( info.receiver );
