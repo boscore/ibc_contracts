@@ -1160,10 +1160,12 @@ namespace eosio {
 
       _origtrxs.erase( _origtrxs.find(it->id) );
 
-      auto _rmdunrbs = rmdunrbs_table( _self, peerchain_name.value );
-      _rmdunrbs.emplace( _self, [&]( auto& r ) {
-         r.id        = _rmdunrbs.available_primary_key();
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      _rmdunrbs2.emplace( _self, [&]( auto& r ) {
+         r.id        = _rmdunrbs2.available_primary_key();
+         r.peerchain = peerchain_name;
          r.trx_id    = trx_id;
+         r.action    = it->action;
       });
    }
 
