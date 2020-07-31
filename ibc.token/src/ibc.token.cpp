@@ -1546,6 +1546,7 @@ namespace eosio {
       /// record to hub table
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto p_id = _hubtrxs.available_primary_key();
+      p_id = p_id == 0 ? 1 : p_id;
       _hubtrxs.emplace( _self, [&]( auto& r ) {
          r.id                 = p_id; /// can not use cash_seq_num,
          r.cash_time_slot     = get_block_time_slot();
@@ -1677,6 +1678,8 @@ namespace eosio {
    }
 
    void token::rbkdiehubtrx( const transaction_id_type& hub_trx_id ){
+      check_admin_auth();
+
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
       const auto& hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
@@ -1696,10 +1699,8 @@ namespace eosio {
          ibc_withdraw = true;
       }
 
-      const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
-      require_auth( acpt.administrator );
-
       if ( ! ibc_withdraw ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= hub_trx_p->to_quantity;
             r.total_transfer -= hub_trx_p->to_quantity;
@@ -1837,6 +1838,14 @@ namespace eosio {
          require_auth( _admin_st.admin );
       }
    }
+
+   void token::mvunrtotbl2( uint64_t id, const transfer_action_info transfer_para ){
+
+   }
+
+   void token::rbkunrbktrx( const transaction_id_type trx_id ){
+
+   }
 } /// namespace eosio
 
 extern "C" {
@@ -1848,6 +1857,7 @@ extern "C" {
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
+            (mvunrtotbl2)(rbkunrbktrx)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)(rbkdiehubtrx)
 #endif
