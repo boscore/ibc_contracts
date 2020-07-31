@@ -232,6 +232,12 @@ namespace eosio {
       [[eosio::action]]
       void setfreeacnt( name peerchain_name, name account );
 
+      [[eosio::action]]
+      void mvunrtotbl2( name peerchain_name, uint64_t id, const transfer_action_info transfer_para );
+
+      [[eosio::action]]
+      void rbkunrbktrx( const transaction_id_type trx_id );
+
 #ifdef HUB
       [[eosio::action]]
       void hubinit( name hub_account );
@@ -239,6 +245,9 @@ namespace eosio {
       // inline action
       [[eosio::action]] /// used to support blockchain browser display detail information
       void feetransfer( name from, name to, asset quantity, string memo );
+
+      [[eosio::action]]
+      void rbkdiehubtrx( const transaction_id_type& hub_trx_id );
 #endif
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {
@@ -371,7 +380,6 @@ namespace eosio {
          indexed_by<"origcontract"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_original_contract> >
       > _accepts;
       const currency_accept& get_currency_accept( symbol_code symcode );
-      const currency_accept& get_currency_accept_by_orig_contract( name contract );
 
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_stats {
@@ -450,7 +458,7 @@ namespace eosio {
          indexed_by<"trxid"_n, const_mem_fun<original_trx_info, fixed_bytes<32>, &original_trx_info::by_trx_id> >
       >  origtrxs_table;
 
-      void origtrxs_emplace( name peerchain_name, transfer_action_info action );
+      void origtrxs_emplace( name peerchain_name, transfer_action_info action, transaction_id_type trx_id );
       void rollback_trx( name peerchain_name, transaction_id_type trx_id );
       transfer_action_info get_orignal_action_by_trx_id( name peerchain_name, transaction_id_type trx_id );
       void erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( name peerchain_name, transaction_id_type trx_id );
@@ -501,6 +509,20 @@ namespace eosio {
       };
       typedef eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  rmdunrbs_table;
 
+      // use to record removed unrollbackable transactions
+      // code,scope(_self,_self.value)
+      struct [[eosio::table]] deleted_unrollbackable_trx_info2 {
+         uint64_t                id; // auto-increment
+         name                    peerchain;
+         transaction_id_type     trx_id;
+         transfer_action_info    action; // used when execute rollback
+
+         uint64_t primary_key()const { return id; }
+         fixed_bytes<32> by_trx_id()const { return fixed_bytes<32>(trx_id.hash); }
+      };
+      typedef eosio::multi_index< "rmdunrbs2"_n, deleted_unrollbackable_trx_info2,
+          indexed_by<"trxid"_n, const_mem_fun<deleted_unrollbackable_trx_info2, fixed_bytes<32>, &deleted_unrollbackable_trx_info2::by_trx_id> >
+      >  rmdunrbs_table2;
 
       void withdraw( name from, name peerchain_name, name peerchain_receiver, asset quantity, string memo );
       void sub_balance( name owner, asset value );
@@ -525,7 +547,7 @@ namespace eosio {
       
       // code,scope(_self,_self.value)
       struct [[eosio::table]] hub_trx_info {
-         uint64_t              cash_seq_num; // set by seq_num in cash action
+         uint64_t              id; // set by seq_num in cash action
          uint64_t              cash_time_slot;
          name                  from_chain;
          name                  from_account;
@@ -542,7 +564,7 @@ namespace eosio {
          uint8_t               forward_times;
          uint8_t               backward_times;
 
-         uint64_t primary_key()const { return cash_seq_num; }
+         uint64_t primary_key()const { return id; }
          fixed_bytes<32> by_orig_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
          fixed_bytes<32> by_hub_trx_id()const { return fixed_bytes<32>(hub_trx_id.hash); }
       };

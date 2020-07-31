@@ -396,6 +396,17 @@ void unlockall();
  - open the `hub` feature of ibc.token contract.
  - for more information of hub feature, please refer to [ibc_hub.md](../docs/IBC_Hub_Protocol.md).
  
+####  
+```
+    void rbkdiehubtrx( const transaction_id_type& hub_trx_id );
+```
+ - rollback die hub transaction.
+ - **hub_trx_id** the hub transaction id.
+ - when the `hub_trx` (which triggered by `relay plugin` with relay auth automatically) 
+   no longer exist in table **origtrxs(_self,hub_trx.to_chain.value)**(this need one week), 
+   then, the call this function with relay auth to 
+ 
+ 
 #### setfreeacnt
 ``` 
     void setfreeacnt( name peerchain_name, name account );

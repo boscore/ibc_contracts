@@ -494,6 +494,23 @@ namespace eosio {
    void token::transfer_notify( name original_contract, name from, name to, asset quantity, string memo ) {
       eosio_assert( to == _self, "to is not this contract");
 
+      // Make sure that the action is the outermost action, so it need to compare all the parameters one by one
+      capi_checksum256 trx_id;
+      {
+         std::vector<char> trx_bytes;
+         size_t trx_size = transaction_size();
+         trx_bytes.resize(trx_size);
+         read_transaction(trx_bytes.data(), trx_size);
+         sha256( trx_bytes.data(), trx_size, &trx_id );
+         auto trx = unpack<transaction>(trx_bytes.data(), trx_size);
+         eosio_assert( trx.actions.size() == 1, "transction contains more then one action");
+         auto first_action = trx.actions.front();
+         eosio_assert( first_action.name == "transfer"_n, "first_action.name != transfer");
+         transfer_action_type args = unpack<transfer_action_type>( first_action.data );
+         eosio_assert(args.from == from && args.to == to &&
+                      args.quantity == quantity && args.memo == memo, "ibc action can't be inline action");
+      }
+
       if ( memo.find("local") == 0 ){
          return;
       }
@@ -578,7 +595,7 @@ namespace eosio {
       });
       eosio_assert( acpt.accept.amount <= acpt.max_accept.amount, "acpt.accept.amount <= acpt.max_accept.amount assert failed");
 
-      origtrxs_emplace( info.peerchain, transfer_action_info{ original_contract, from, quantity } );
+      origtrxs_emplace( info.peerchain, transfer_action_info{ original_contract, from, quantity }, trx_id );
    }
 
    /**
@@ -649,7 +666,7 @@ namespace eosio {
          auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
 
-         if ( info.peerchain == _gstate.this_chain ){
+         if ( info.peerchain == _gstate.this_chain ){ // The purpose of this logic is to unify the action call format
             eosio_assert( _stats.find(sym.raw()) != _stats.end(), "token symbol not found in table stats");
             require_recipient( from );
             require_recipient( info.receiver );
@@ -749,7 +766,7 @@ namespace eosio {
          r.total_withdraw_times += 1;
       });
 
-      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity } );
+      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity }, get_trx_id() );
 
       update_stats2( quantity.symbol.code() );
    }
@@ -1084,7 +1101,7 @@ namespace eosio {
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
       print( memo.c_str() );
 
-      asset final_quantity;
+      asset final_quantity(0,action_info.quantity.symbol);
 
       bool ibc_withdraw = false;
       auto sym_code_raw = action_info.quantity.symbol.code().raw();
@@ -1094,7 +1111,7 @@ namespace eosio {
       }
 
       if ( ! ibc_withdraw ){  // rollback ibc transfer
-         const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
+         const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= action_info.quantity;
             r.total_transfer -= action_info.quantity;
@@ -1145,7 +1162,7 @@ namespace eosio {
       #endif
    }
 
-   static const uint32_t min_distance = 3600 * 24 * 2;   // one day
+   static const uint32_t min_distance = 3600 * 24 * 2 * 14;   // one day * 14 = two weeks
    void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay ){
       auto pch = _peerchains.get( peerchain_name.value );
       chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
@@ -1160,10 +1177,12 @@ namespace eosio {
 
       _origtrxs.erase( _origtrxs.find(it->id) );
 
-      auto _rmdunrbs = rmdunrbs_table( _self, peerchain_name.value );
-      _rmdunrbs.emplace( _self, [&]( auto& r ) {
-         r.id        = _rmdunrbs.available_primary_key();
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      _rmdunrbs2.emplace( _self, [&]( auto& r ) {
+         r.id        = _rmdunrbs2.available_primary_key();
+         r.peerchain = peerchain_name;
          r.trx_id    = trx_id;
+         r.action    = it->action;
       });
    }
 
@@ -1186,7 +1205,7 @@ namespace eosio {
          }
 
          if ( ! ibc_withdraw ){  // rollback ibc transfer
-            const auto& acpt = get_currency_accept_by_orig_contract( action_info.contract );
+            const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
                r.accept -= action_info.quantity;
                r.total_transfer -= action_info.quantity;
@@ -1359,11 +1378,6 @@ namespace eosio {
    }
 
    // ---- currency_accept related methods ----
-   const token::currency_accept& token::get_currency_accept_by_orig_contract( name contract ){
-      auto idx = _accepts.get_index<"origcontract"_n>();
-      return idx.get( contract.value, "token of contract does not support" );
-   }
-
    const token::currency_accept& token::get_currency_accept( symbol_code symcode ){
       return _accepts.get( symcode.raw(), "token with symbol does not support" );
    }
@@ -1374,8 +1388,7 @@ namespace eosio {
    }
 
    // ---- original_trx_info related methods  ----
-   void token::origtrxs_emplace( name peerchain_name, transfer_action_info action ) {
-      transaction_id_type trx_id = get_trx_id();
+   void token::origtrxs_emplace( name peerchain_name, transfer_action_info action, transaction_id_type trx_id ) {
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       
       auto& pchm = _peerchainm.get( peerchain_name.value, "peerchain not found");
@@ -1550,8 +1563,10 @@ namespace eosio {
 
       /// record to hub table
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto p_id = _hubtrxs.available_primary_key();
+      p_id = p_id == 0 ? 1 : p_id;
       _hubtrxs.emplace( _self, [&]( auto& r ) {
-         r.cash_seq_num       = cash_seq_num;
+         r.id                 = p_id; /// can not use cash_seq_num,
          r.cash_time_slot     = get_block_time_slot();
          r.from_chain         = from_chain;
          r.from_account       = from_account;
@@ -1661,9 +1676,13 @@ namespace eosio {
    void token::rollback_hub_trx( const transaction_id_type& hub_trx_id, asset quantity ){
       auto _hubtrxs = hubtrxs_table( _self, _self.value );
       auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
-      auto hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      const auto& hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
       if( hub_trx_p != idx.end()){
-         auto mini_to_quantity = quantity - (hub_trx_p->from_quantity - hub_trx_p->mini_to_quantity);
+         auto diff = hub_trx_p->from_quantity - hub_trx_p->mini_to_quantity;
+         auto mini_to_quantity = quantity;
+         if ( quantity.amount > diff.amount ){
+            mini_to_quantity = quantity - diff;
+         }
 
          _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
             r.from_quantity      = quantity;
@@ -1674,6 +1693,63 @@ namespace eosio {
             r.hub_trx_time_slot  = 0;
          });
       }
+   }
+
+   void token::rbkdiehubtrx( const transaction_id_type& hub_trx_id ){
+      check_admin_auth();
+
+      auto _hubtrxs = hubtrxs_table( _self, _self.value );
+      auto idx = _hubtrxs.get_index<"hubtrxid"_n>();
+      const auto& hub_trx_p = idx.find(fixed_bytes<32>(hub_trx_id.hash));
+      eosio_assert(hub_trx_p != idx.end(), "hub_trx_id not exist!");
+
+      auto _origtrxs = origtrxs_table( _self, hub_trx_p->to_chain.value );
+      auto idx2 = _origtrxs.get_index<"trxid"_n>();
+      auto it = idx2.find( fixed_bytes<32>(hub_trx_id.hash) );
+      eosio_assert( it == idx2.end(), "original trx still exist!");
+
+      string memo = "rollback hub transaction: " + capi_checksum256_to_string(hub_trx_id);
+
+      bool ibc_withdraw = false;
+      auto sym_code_raw = hub_trx_p->to_quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
+      if ( itr != _stats.end() && hub_trx_p->to_chain == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ! ibc_withdraw ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept(hub_trx_p->to_quantity.symbol.code());
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= hub_trx_p->to_quantity;
+            r.total_transfer -= hub_trx_p->to_quantity;
+            r.total_transfer_times -= 1;
+         });
+
+         if ( acpt.original_contract == _self ){
+            transfer_action_type action_data{ _self, _hubgs.hub_account, hub_trx_p->to_quantity, memo };
+            action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+         }
+      } else { // rollback ibc withdraw
+         const auto& st = get_currency_stats( hub_trx_p->to_quantity.symbol.code() );
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.supply += hub_trx_p->to_quantity;
+            r.max_supply += hub_trx_p->to_quantity;
+            r.total_withdraw -= hub_trx_p->to_quantity;
+            r.total_withdraw_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, _hubgs.hub_account, hub_trx_p->to_quantity, memo };
+         action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+
+         update_stats2( st.supply.symbol.code() );
+      }
+
+      _hubtrxs.modify( *hub_trx_p, same_payer, [&]( auto& r ) {
+         r.to_quantity.amount = 0;
+         r.fee_receiver       = name();
+         r.hub_trx_id         = capi_checksum256();
+         r.hub_trx_time_slot  = 0;
+      });
    }
 
    void token::delete_by_hub_trx_id( const transaction_id_type& hub_trx_id ){
@@ -1780,6 +1856,71 @@ namespace eosio {
          require_auth( _admin_st.admin );
       }
    }
+
+   void token::mvunrtotbl2( name peerchain_name, uint64_t id, const transfer_action_info transfer_para ){
+      check_admin_auth();
+
+      auto _rmdunrbs = rmdunrbs_table( _self, peerchain_name.value );
+      auto itr = _rmdunrbs.find( id );
+      eosio_assert( itr != _rmdunrbs.end(), "record not exist!");
+
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      _rmdunrbs2.emplace( _self, [&]( auto& r ) {
+         r.id        = _rmdunrbs2.available_primary_key();
+         r.peerchain = peerchain_name;
+         r.trx_id    = itr->trx_id;
+         r.action    = transfer_para;
+      });
+
+      _rmdunrbs.erase( itr );
+   }
+
+   void token::rbkunrbktrx( const transaction_id_type trx_id ){
+      check_admin_auth();
+
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      auto idx = _rmdunrbs2.get_index<"trxid"_n>();
+      auto trx_p = idx.find(fixed_bytes<32>(trx_id.hash));
+      eosio_assert(trx_p!=idx.end(),"trx_id not exist in table rmdunrbs2");
+
+      transfer_action_info action_info = trx_p->action;
+      string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
+      print( memo.c_str() );
+
+      bool ibc_withdraw = false;
+      auto sym_code_raw = action_info.quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
+      if ( itr != _stats.end() && trx_p->peerchain == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ! ibc_withdraw ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= action_info.quantity;
+            r.total_transfer -= action_info.quantity;
+            r.total_transfer_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+         action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+      } else { // rollback ibc withdraw
+         const auto& st = get_currency_stats( action_info.quantity.symbol.code() );
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.supply += action_info.quantity;
+            r.max_supply += action_info.quantity;
+            r.total_withdraw -= action_info.quantity;
+            r.total_withdraw_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+         action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+
+         update_stats2( st.supply.symbol.code() );
+      }
+
+      _rmdunrbs2.erase( *trx_p );
+   }
 } /// namespace eosio
 
 extern "C" {
@@ -1791,8 +1932,9 @@ extern "C" {
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
+            (mvunrtotbl2)(rbkunrbktrx)
 #ifdef HUB
-            (hubinit)(feetransfer)(regpegtoken2)
+            (hubinit)(feetransfer)(regpegtoken2)(rbkdiehubtrx)
 #endif
             )
          }
