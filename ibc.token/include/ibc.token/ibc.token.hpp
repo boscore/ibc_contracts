@@ -458,7 +458,7 @@ namespace eosio {
          indexed_by<"trxid"_n, const_mem_fun<original_trx_info, fixed_bytes<32>, &original_trx_info::by_trx_id> >
       >  origtrxs_table;
 
-      void origtrxs_emplace( name peerchain_name, transfer_action_info action );
+      void origtrxs_emplace( name peerchain_name, transfer_action_info action, transaction_id_type trx_id );
       void rollback_trx( name peerchain_name, transaction_id_type trx_id );
       transfer_action_info get_orignal_action_by_trx_id( name peerchain_name, transaction_id_type trx_id );
       void erase_record_in_origtrxs_tb_by_trx_id_for_confirmed( name peerchain_name, transaction_id_type trx_id );

@@ -494,6 +494,23 @@ namespace eosio {
    void token::transfer_notify( name original_contract, name from, name to, asset quantity, string memo ) {
       eosio_assert( to == _self, "to is not this contract");
 
+      // Make sure that the action is the outermost action, so it need to compare all the parameters one by one
+      capi_checksum256 trx_id;
+      {
+         std::vector<char> trx_bytes;
+         size_t trx_size = transaction_size();
+         trx_bytes.resize(trx_size);
+         read_transaction(trx_bytes.data(), trx_size);
+         sha256( trx_bytes.data(), trx_size, &trx_id );
+         auto trx = unpack<transaction>(trx_bytes.data(), trx_size);
+         eosio_assert( trx.actions.size() == 1, "transction contains more then one action");
+         auto first_action = trx.actions.front();
+         eosio_assert( first_action.name == "transfer"_n, "first_action.name != transfer");
+         transfer_action_type args = unpack<transfer_action_type>( first_action.data );
+         eosio_assert(args.from == from && args.to == to &&
+                      args.quantity == quantity && args.memo == memo, "ibc action can't be inline action");
+      }
+
       if ( memo.find("local") == 0 ){
          return;
       }
@@ -578,7 +595,7 @@ namespace eosio {
       });
       eosio_assert( acpt.accept.amount <= acpt.max_accept.amount, "acpt.accept.amount <= acpt.max_accept.amount assert failed");
 
-      origtrxs_emplace( info.peerchain, transfer_action_info{ original_contract, from, quantity } );
+      origtrxs_emplace( info.peerchain, transfer_action_info{ original_contract, from, quantity }, trx_id );
    }
 
    /**
@@ -749,7 +766,7 @@ namespace eosio {
          r.total_withdraw_times += 1;
       });
 
-      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity } );
+      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity }, get_trx_id() );
 
       update_stats2( quantity.symbol.code() );
    }
@@ -1371,8 +1388,7 @@ namespace eosio {
    }
 
    // ---- original_trx_info related methods  ----
-   void token::origtrxs_emplace( name peerchain_name, transfer_action_info action ) {
-      transaction_id_type trx_id = get_trx_id();
+   void token::origtrxs_emplace( name peerchain_name, transfer_action_info action, transaction_id_type trx_id ) {
       auto _origtrxs = origtrxs_table( _self, peerchain_name.value );
       
       auto& pchm = _peerchainm.get( peerchain_name.value, "peerchain not found");
