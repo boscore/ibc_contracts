@@ -62,4 +62,78 @@ namespace eosio{
       }
       return ret;
    }
+
+
+
+   /**
+    * ---- 'ibc transfer action's memo string format' ----
+    * memo string format is '{account_name}@{chain_name} {user-defined string}', user-defined string is optinal
+    *
+    * examples:
+    * 'bosaccount31@bos happy new year 2019'
+    * 'bosaccount32@bos'
+    */
+
+   struct memo_info_type {
+      name     receiver;
+      name     peerchain;
+      string   notes;
+   };
+
+   memo_info_type get_memo_info( const string& memo_str ){
+      static const string format = "{receiver}@{chain} {user-defined string}";
+      memo_info_type info;
+
+      string memo = memo_str;
+      trim( memo );
+
+      // --- get receiver ---
+      auto pos = memo.find("@");
+      eosio_assert( pos != std::string::npos, ( string("memo format error, didn't find charactor \'@\' in memo, correct format: ") + format ).c_str() );
+      string receiver_str = memo.substr( 0, pos );
+      trim( receiver_str );
+      info.receiver = name( receiver_str );
+
+      // --- trim ---
+      memo = memo.substr( pos + 1 );
+      trim( memo );
+
+      // --- get chain name and notes ---
+      pos = memo.find_first_not_of("abcdefghijklmnopqrstuvwxyz012345");
+      if ( pos == std::string::npos ){
+         info.peerchain = name( memo );
+         info.notes = "";
+      } else {
+         info.peerchain = name( memo.substr(0,pos) );
+         info.notes = memo.substr( pos ); // important: not + 1
+         trim( info.notes );
+      }
+
+      eosio_assert( info.receiver != name(), ( string("memo format error, receiver not provided, correct format: ") + format ).c_str() );
+      eosio_assert( info.peerchain != name(), ( string("memo format error, chain not provided, correct format: ") + format ).c_str() );
+      return info;
+   }
+
+   string get_value_str_by_key_str(const string& src, const string& key_str ){
+      string src_str = src;
+      string value_str;
+      auto pos = src_str.find( key_str );
+      if ( pos == std::string::npos ){ return string(); }
+
+      src_str = src_str.substr(pos + key_str.length());
+      trim( src_str );
+      pos = src_str.find("=");
+      if ( pos == std::string::npos ){ return string(); }
+
+      src_str = src_str.substr(1);
+      trim( src_str );
+      pos = src_str.find(' ');
+      if ( pos == std::string::npos ){
+         value_str = src_str;
+      } else {
+         value_str = src_str.substr(0,pos);
+      }
+
+      return value_str;
+   }
 }

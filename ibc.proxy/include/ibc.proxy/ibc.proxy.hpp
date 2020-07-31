@@ -7,16 +7,22 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
+#include <ibc.chain/types.hpp>
 #include <ibc.token/ibc.token.hpp>
 
 namespace eosio {
 
-
+   using std::string;
 
    class [[eosio::contract("ibc.proxy")]] proxy : public contract {
       public:
-      token( name s, name code, datastream<const char*> ds );
-      ~token();
+      proxy( name s, name code, datastream<const char*> ds );
+      ~proxy();
+
+
+      const string key_token_contract = "token_contract";
+      const string key_orig_from = "orig_from";
+      const string key_orig_trxid = "orig_trxid";
 
       [[eosio::action]]
       void setglobal( name ibc_token_account );
@@ -29,21 +35,11 @@ namespace eosio {
                             string  memo );
 
       [[eosio::action]]
-      void transfer( name    from,
-                     name    to,
-                     asset   quantity,
-                     string  memo );
-
-      // called by ibc plugin repeatedly
-      [[eosio::action]]
-      void rollback( transaction_id_type trx_id );
-
-
+      void transfer( name from, name to, asset quantity, string memo );
 
       struct [[eosio::table("globals")]] global_state {
-         global_state(){
+         global_state(){}
          name              ibc_token_account;
-         // explicit serialization macro is necessary, without this, error "Exceeded call depth maximum" will occur when call state_singleton.set(state)
          EOSLIB_SERIALIZE( global_state, (ibc_token_account))
       };
 
@@ -51,24 +47,24 @@ namespace eosio {
       eosio::singleton< "globals"_n, global_state >   _global_state;
       global_state                                    _gstate;
 
-      // use to record accepted transfer and withdraw transactions
-      // code,scope(_self,peerchain_name.value)
-      struct [[eosio::table]] original_trx_info {
+      // use to record accepted ibc transactions
+      // code,scope(_self,_self.value)
+      struct [[eosio::table]] proxy_trx_info {
          uint64_t                id; // auto-increment
-         uint64_t                block_time_slot; // new record must not decrease time slot,
-         transaction_id_type     trx_id;
-         transfer_action_info    action; // very important infomation, used when execute rollback
-
+         transaction_id_type     orig_trx_id;
+         uint64_t                block_time_slot;
+         name                    token_contract;
+         name                    orig_from;
+         name                    to; // always be self
+         asset                   quantity;
+         string                  orig_memo;
 
          uint64_t primary_key()const { return id; }
-         uint64_t by_time_slot()const { return block_time_slot; }
-         fixed_bytes<32> by_trx_id()const { return fixed_bytes<32>(trx_id.hash); }
+         fixed_bytes<32> by_trx_id()const { return fixed_bytes<32>(orig_trx_id.hash); }
       };
-      typedef eosio::multi_index< "origtrxs"_n, original_trx_info,
-            indexed_by<"tslot"_n, const_mem_fun<original_trx_info, uint64_t,        &original_trx_info::by_time_slot> >,  // used by ibc plugin
-      indexed_by<"trxid"_n, const_mem_fun<original_trx_info, fixed_bytes<32>, &original_trx_info::by_trx_id> >
-      >  origtrxs_table;
-
+      eosio::multi_index< "proxytrxs"_n, proxy_trx_info,
+      indexed_by<"trxid"_n, const_mem_fun<proxy_trx_info, fixed_bytes<32>, &proxy_trx_info::by_trx_id> >
+      >  _proxytrxs;
    };
 
 } /// namespace eosio

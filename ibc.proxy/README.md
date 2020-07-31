@@ -36,12 +36,13 @@ so instead your inline action should do like bellow
 ``` 
 call contract `xxx.token`'s action `transfer` with parameters `<from>  proxy2bosibc <quantity> <account@chain notes-string>`, 
 ```
-then anyone or the relay accounts can send another transaction which contail only one action like bellow:
+then anyone or the relay accounts can send another transaction which contail only one action like bellow.
 
 `Transaction`
 ```
-call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string p_orig_account=<original account>  p_orig_trx_id=<trx id> >`
+call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string pxy_token_contract=<token contract> p_orig_from=<original from>  p_orig_trx_id=<trx id> >`
 ```
+p_orig_account 用于告诉ibc.token合约，原始账户是谁，以便ibc.token退款的时候直接退给该账户，而不需再经过proxy合约处理。
 
 when sended, remove record.
 
@@ -50,6 +51,6 @@ when sended, remove record.
 
 transfer_notify(from some token's contract action transfer)
 
-rollback_notity(from bosibc.io action rollback)
-
 tansfer
+
+rollback
