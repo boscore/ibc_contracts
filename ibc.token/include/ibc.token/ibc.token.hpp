@@ -233,7 +233,7 @@ namespace eosio {
       void setfreeacnt( name peerchain_name, name account );
 
       [[eosio::action]]
-      void mvunrtotbl2( uint64_t id, const transfer_action_info transfer_para );
+      void mvunrtotbl2( name peerchain_name, uint64_t id, const transfer_action_info transfer_para );
 
       [[eosio::action]]
       void rbkunrbktrx( const transaction_id_type trx_id );
@@ -510,9 +510,10 @@ namespace eosio {
       typedef eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  rmdunrbs_table;
 
       // use to record removed unrollbackable transactions
-      // code,scope(_self,peerchain_name.value)
+      // code,scope(_self,_self.value)
       struct [[eosio::table]] deleted_unrollbackable_trx_info2 {
          uint64_t                id; // auto-increment
+         name                    peerchain;
          transaction_id_type     trx_id;
          transfer_action_info    action; // used when execute rollback
 

@@ -1145,7 +1145,7 @@ namespace eosio {
       #endif
    }
 
-   static const uint32_t min_distance = 3600 * 24 * 2 * 7;   // one day * 7 = one week
+   static const uint32_t min_distance = 3600 * 24 * 2 * 14;   // one day * 14 = two weeks
    void token::rmunablerb( name peerchain_name, const transaction_id_type trx_id, name relay ){
       auto pch = _peerchains.get( peerchain_name.value );
       chain::require_relay_auth( pch.thischain_ibc_chain_contract, relay );
@@ -1839,12 +1839,69 @@ namespace eosio {
       }
    }
 
-   void token::mvunrtotbl2( uint64_t id, const transfer_action_info transfer_para ){
+   void token::mvunrtotbl2( name peerchain_name, uint64_t id, const transfer_action_info transfer_para ){
+      check_admin_auth();
 
+      auto _rmdunrbs = rmdunrbs_table( _self, peerchain_name.value );
+      auto itr = _rmdunrbs.find( id );
+      eosio_assert( itr != _rmdunrbs.end(), "record not exist!");
+
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      _rmdunrbs2.emplace( _self, [&]( auto& r ) {
+         r.id        = _rmdunrbs2.available_primary_key();
+         r.peerchain = peerchain_name;
+         r.trx_id    = itr->trx_id;
+         r.action    = transfer_para;
+      });
+
+      _rmdunrbs.erase( itr );
    }
 
    void token::rbkunrbktrx( const transaction_id_type trx_id ){
+      check_admin_auth();
 
+      auto _rmdunrbs2 = rmdunrbs_table2( _self, _self.value );
+      auto idx = _rmdunrbs2.get_index<"trxid"_n>();
+      auto trx_p = idx.find(fixed_bytes<32>(trx_id.hash));
+      eosio_assert(trx_p!=idx.end(),"trx_id not exist in table rmdunrbs2");
+
+      transfer_action_info action_info = trx_p->action;
+      string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
+      print( memo.c_str() );
+
+      bool ibc_withdraw = false;
+      auto sym_code_raw = action_info.quantity.symbol.code().raw();
+      auto itr = _stats.find( sym_code_raw );
+      if ( itr != _stats.end() && trx_p->peerchain == itr->peerchain_name ){
+         ibc_withdraw = true;
+      }
+
+      if ( ! ibc_withdraw ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept(action_info.quantity.symbol.code());
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= action_info.quantity;
+            r.total_transfer -= action_info.quantity;
+            r.total_transfer_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+         action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+      } else { // rollback ibc withdraw
+         const auto& st = get_currency_stats( action_info.quantity.symbol.code() );
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.supply += action_info.quantity;
+            r.max_supply += action_info.quantity;
+            r.total_withdraw -= action_info.quantity;
+            r.total_withdraw_times -= 1;
+         });
+
+         transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+         action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+
+         update_stats2( st.supply.symbol.code() );
+      }
+
+      _rmdunrbs2.erase( *trx_p );
    }
 } /// namespace eosio
 
