@@ -80,8 +80,8 @@ namespace eosio {
       eosio_assert( orig_from == trx_p->orig_from, "orig_from == trx_p->from assert failed");
 
       string correct_memo_str = trx_p->orig_memo + " " +
-            key_orig_from + "=" + trx_p->orig_from.to_string() + " " +
-            key_orig_trxid + "=" + capi_checksum256_to_string(trx_p->orig_trx_id);
+            key_orig_trxid + "=" + capi_checksum256_to_string(trx_p->orig_trx_id) + " " +
+            key_orig_from + "=" + trx_p->orig_from.to_string();
 
       eosio_assert( memo == correct_memo_str, "memo != correct_memo_str");
 

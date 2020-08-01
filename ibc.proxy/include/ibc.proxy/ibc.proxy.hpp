@@ -12,11 +12,8 @@
 
 namespace eosio {
 
-
-
    static const string key_orig_from = "orig_from";
    static const string key_orig_trxid = "orig_trxid";
-
 
    class [[eosio::contract("ibc.proxy")]] proxy : public contract {
       public:
