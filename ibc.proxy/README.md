@@ -53,6 +53,8 @@ call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc <
 ```
 
 
+ibc.token看到是来自proxy账户的转账，提取orig from，在orig_trx表中进行替换，需要在transfer_notify和withdraw两个表中进行修改。
+
 
 when sended, remove record.
 

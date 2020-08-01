@@ -8,6 +8,7 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
 #include <ibc.token/types.hpp>
+#include <ibc.proxy/ibc.proxy.hpp>
 
 namespace eosio {
 
@@ -277,7 +278,11 @@ namespace eosio {
          name              admin;
          EOSLIB_SERIALIZE( admin_struct, (admin))
       };
-      typedef eosio::singleton< "admin"_n, admin_struct > admin_singleton;
+
+      struct [[eosio::table("proxy")]] proxy_struct {
+         name              proxy;
+         EOSLIB_SERIALIZE( proxy_struct, (proxy))
+      };
 
       // code,scope (_self,_self)
       struct [[eosio::table]] currency_accept {
@@ -329,6 +334,8 @@ namespace eosio {
       global_state                                    _gstate;
       eosio::singleton< "admin"_n, admin_struct >     _admin_sg;
       admin_struct                                    _admin_st;
+      eosio::singleton< "proxy"_n, proxy_struct >     _proxy_sg;
+      proxy_struct                                    _proxy_st;
 
       // code,scope (_self,_self)
       struct [[eosio::table("freeaccount")]] peer_chain_free_account {

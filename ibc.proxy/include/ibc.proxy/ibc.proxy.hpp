@@ -12,17 +12,17 @@
 
 namespace eosio {
 
-   using std::string;
+
+
+   static const string key_orig_from = "orig_from";
+   static const string key_orig_trxid = "orig_trxid";
+
 
    class [[eosio::contract("ibc.proxy")]] proxy : public contract {
       public:
       proxy( name s, name code, datastream<const char*> ds );
       ~proxy();
 
-
-      const string key_token_contract = "token_contract";
-      const string key_orig_from = "orig_from";
-      const string key_orig_trxid = "orig_trxid";
 
       [[eosio::action]]
       void setglobal( name ibc_token_account );

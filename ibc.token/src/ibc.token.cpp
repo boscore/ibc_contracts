@@ -18,6 +18,7 @@ namespace eosio {
          contract( s, code, ds ),
          _global_state( _self, _self.value ),
          _admin_sg(_self, _self.value),
+         _proxy_sg(_self, _self.value),
          _peerchains( _self, _self.value ),
          _freeaccount( _self, _self.value ),
          _peerchainm( _self, _self.value ),
@@ -29,6 +30,7 @@ namespace eosio {
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _admin_st = _admin_sg.exists() ? _admin_sg.get() : admin_struct{};
+      _proxy_st = _proxy_sg.exists() ? _proxy_sg.get() : proxy_struct{};
       #ifdef HUB
       _hubgs = _hub_globals.exists() ? _hub_globals.get() : hub_globals{};
       #endif
@@ -37,6 +39,7 @@ namespace eosio {
    token::~token(){
       _global_state.set( _gstate, _self );
       _admin_sg.set( _admin_st , _self );
+      _proxy_sg.set( _proxy_st , _self );
       #ifdef HUB
       _hub_globals.set( _hubgs, _self );
       #endif
@@ -464,6 +467,14 @@ namespace eosio {
          return;
       }
 
+      // check ibc proxy account
+      name real_from = from;
+      if( from == _proxy_st.proxy ){
+         name orig_from = name( get_value_str_by_key_str( memo, key_orig_from ));
+         eosio_assert( is_account(orig_from), "orig_from account not exist");
+         real_from = orig_from;
+      }
+
       // check global active
       eosio_assert( _gstate.active, "global not active" );
 
@@ -545,7 +556,7 @@ namespace eosio {
       });
       eosio_assert( acpt.accept.amount <= acpt.max_accept.amount, "acpt.accept.amount <= acpt.max_accept.amount assert failed");
 
-      origtrxs_emplace( info.peerchain, transfer_action_info{ token_contract, from, quantity }, trx_id );
+      origtrxs_emplace( info.peerchain, transfer_action_info{ token_contract, real_from, quantity }, trx_id );
    }
 
    /**
@@ -716,7 +727,15 @@ namespace eosio {
          r.total_withdraw_times += 1;
       });
 
-      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, from, quantity }, get_trx_id() );
+      // check ibc proxy account
+      name real_from = from;
+      if( from == _proxy_st.proxy ){
+         name orig_from = name( get_value_str_by_key_str( memo, key_orig_from ));
+         eosio_assert( is_account(orig_from), "orig_from account not exist");
+         real_from = orig_from;
+      }
+
+      origtrxs_emplace( peerchain_name, transfer_action_info{ _self, real_from, quantity }, get_trx_id() );
 
       update_stats2( quantity.symbol.code() );
    }
