@@ -440,7 +440,7 @@ namespace eosio {
      *
      * when start with "local", means this is a local chain transaction, do not any process and return directly
      */
-   void token::transfer_notify( name original_contract, name from, name to, asset quantity, string memo ) {
+   void token::transfer_notify( name token_contract, name from, name to, asset quantity, string memo ) {
       eosio_assert( to == _self, "to is not this contract");
 
       // Make sure that the action is the outermost action, so it need to compare all the parameters one by one
@@ -477,6 +477,7 @@ namespace eosio {
       const auto& acpt = get_currency_accept( quantity.symbol.code() );
       eosio_assert( acpt.active, "not active");
 
+      eosio_assert( token_contract == acpt.original_contract, "original_contract does not match");
       eosio_assert( quantity.symbol == acpt.accept.symbol, "symbol does not match");
       eosio_assert( quantity.amount >= acpt.min_once_transfer.amount, "quantity less then min_once_transfer");
       eosio_assert( quantity.amount <= acpt.max_once_transfer.amount, "quantity greater then max_once_transfer");
@@ -544,7 +545,7 @@ namespace eosio {
       });
       eosio_assert( acpt.accept.amount <= acpt.max_accept.amount, "acpt.accept.amount <= acpt.max_accept.amount assert failed");
 
-      origtrxs_emplace( info.peerchain, transfer_action_info{ original_contract, from, quantity }, trx_id );
+      origtrxs_emplace( info.peerchain, transfer_action_info{ token_contract, from, quantity }, trx_id );
    }
 
    /**

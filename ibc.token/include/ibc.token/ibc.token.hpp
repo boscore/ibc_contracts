@@ -279,6 +279,50 @@ namespace eosio {
       };
       typedef eosio::singleton< "admin"_n, admin_struct > admin_singleton;
 
+      // code,scope (_self,_self)
+      struct [[eosio::table]] currency_accept {
+         name        original_contract;
+         asset       accept;
+         asset       max_accept;
+         asset       min_once_transfer;
+         asset       max_once_transfer;
+         asset       max_daily_transfer;
+         uint32_t    max_tfs_per_minute;  // max transfer transactions per minute
+         string      organization;
+         string      website;
+         name        administrator;
+         name        service_fee_mode;    // "fixed"_n or "ratio"_n
+         asset       service_fee_fixed;
+         double      service_fee_ratio;
+         asset       failed_fee;
+         asset       total_transfer;
+         uint64_t    total_transfer_times;
+         asset       total_cash;
+         uint64_t    total_cash_times;
+         bool        active;
+
+         struct currency_accept_mutables {
+            uint32_t    minute_trx_start;
+            uint32_t    minute_trxs;
+            uint32_t    daily_tf_start;
+            asset       daily_tf_sum;
+            uint32_t    daily_wd_start;
+            asset       daily_wd_sum;
+         } mutables;
+
+         uint64_t  primary_key()const { return accept.symbol.code().raw(); } /// by token symbol
+         uint64_t  by_original_contract()const { return original_contract.value; }
+      };
+      typedef eosio::multi_index< "accepts"_n, currency_accept,
+            indexed_by<"origcontract"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_original_contract> >
+      > accepts_table;
+
+      static bool token_contract_registered_in_accepts( name ibc_token_account, name token_contract ) {
+         auto _accepts = accepts_table( ibc_token_account, ibc_token_account.value );
+         auto idx = _accepts.get_index<"origcontract"_n>();
+         auto itr = idx.find( token_contract.value );
+         return itr == idx.end() ? false : true;
+      }
 
    private:
       eosio::singleton< "globals"_n, global_state >   _global_state;
@@ -342,43 +386,8 @@ namespace eosio {
       };
       eosio::multi_index< "peerchainm"_n, peer_chain_mutable > _peerchainm;
 
-      // code,scope (_self,_self)
-      struct [[eosio::table]] currency_accept {
-         name        original_contract;
-         asset       accept;
-         asset       max_accept;
-         asset       min_once_transfer;
-         asset       max_once_transfer;
-         asset       max_daily_transfer;
-         uint32_t    max_tfs_per_minute;  // max transfer transactions per minute
-         string      organization;
-         string      website;
-         name        administrator;
-         name        service_fee_mode;    // "fixed"_n or "ratio"_n
-         asset       service_fee_fixed;
-         double      service_fee_ratio;
-         asset       failed_fee;
-         asset       total_transfer;
-         uint64_t    total_transfer_times;
-         asset       total_cash;
-         uint64_t    total_cash_times;
-         bool        active;
 
-         struct currency_accept_mutables {
-            uint32_t    minute_trx_start;
-            uint32_t    minute_trxs;
-            uint32_t    daily_tf_start;
-            asset       daily_tf_sum;
-            uint32_t    daily_wd_start;
-            asset       daily_wd_sum;
-         } mutables;
-
-         uint64_t  primary_key()const { return accept.symbol.code().raw(); } /// by token symbol
-         uint64_t  by_original_contract()const { return original_contract.value; }
-      };
-      eosio::multi_index< "accepts"_n, currency_accept,
-         indexed_by<"origcontract"_n, const_mem_fun<currency_accept, uint64_t, &currency_accept::by_original_contract> >
-      > _accepts;
+      accepts_table     _accepts;
       const currency_accept& get_currency_accept( symbol_code symcode );
 
       // code,scope (_self,_self)

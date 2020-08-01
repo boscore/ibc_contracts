@@ -40,12 +40,23 @@ then anyone or the relay accounts can send another transaction which contail onl
 
 `Transaction`
 ```
-call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string pxy_token_contract=<token contract> p_orig_from=<original from>  p_orig_trx_id=<trx id> >`
+call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string  p_orig_from=<original from>  p_orig_trx_id=<trx id> >`
 ```
 p_orig_account 用于告诉ibc.token合约，原始账户是谁，以便ibc.token退款的时候直接退给该账户，而不需再经过proxy合约处理。
 
+如果是转回
+
+
+`Transaction`
+```
+call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc <orig_from> <quantity> < p_orig_trx_id=<trx id> >`
+```
+
+
+
 when sended, remove record.
 
+ p_orig_from=<original from> 这两个是给 ibc.token合约用的
 
 ### actions
 
