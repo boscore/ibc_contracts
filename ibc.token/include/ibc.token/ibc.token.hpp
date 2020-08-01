@@ -60,6 +60,9 @@ namespace eosio {
       void setglobal( name this_chain, bool active );
 
       [[eosio::action]]
+      void setgactive( bool value );
+
+      [[eosio::action]]
       void setadmin( name admin );
 
       [[eosio::action]]

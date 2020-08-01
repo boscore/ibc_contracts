@@ -56,6 +56,11 @@ namespace eosio {
       _admin_st.admin = admin;
    }
 
+   void token::setgactive( bool value ){
+      check_admin_auth();
+      _gstate.active = value;
+   }
+
    void token::regpeerchain( name           peerchain_name,
                              string         peerchain_info,
                              name           peerchain_ibc_token_contract,
@@ -1873,7 +1878,7 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regpeerchain)(setchainbool)
+            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(setgactive)(regpeerchain)(setchainbool)
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
