@@ -1,69 +1,53 @@
 ibc.proxy
 ---------
-为了支持通过inline action或者defered的方式发送跨链交易，需要本合约作为中间代理，因为ibc.token合约无法直接支持inline action或defered的跨链交易。
 
+In order to support sending inter-blockchain transactions through EOSIO `inline action` or `deferred transaction`, 
+this proxy contract is needed as an intermediary agent, 
+because the `ibc.token` contract cannot directly support `inline or deferred` inter-blockchain transactions.
 
-需要通过inline 或者defered action 给ibc.token合约账户的交易（即transfer交易），需要将其token转发到本合约账户，而不是ibc.token合约账户，
+If you need to send inter-blockchain transactions through `inline or deferred` action, 
+you need to transfer your token to the proxy account instead of directly to the `ibc.token contract` account(**bosibc.io**).
 
-ibc.proxy账户权限需要和ibc.token一样，resign给多个权威账户，可以是活跃的21个BP账户。
+When the token is transferred to the proxy account through `inline or deferred` transaction, 
+anyone can use any account's authority to transfer the token to `ibc.token` contract(the ibc plugin will do this automatically with relay authority) , 
+or transfer back to the original account after 2 minutes of the original transaction,
 
+Same as the `ibc.token` contract, the `ibc.proxy` contract account's authority should also resign to multiple authoritative accounts, 
+which can be the 21 active BP accounts.
 
-格式
-----
+Protocal Format
+---------------
 
-假设部署ibc.token合约的账户是bosibc.io，部署ibc.proxy合约的账户是proxy2bosibc
-使用inline action或者defered action 发送跨链交易的示例
+Assume:
+`bosibc.io` is the account which depolied `ibc.token` contract.
+`ibcproxy.io` is the account which depolied `ibc.proxy` contract.
 
+assume you want to transfer token "10.0000 BOS" from account `bossender` of BOS mainnet to account `eosreceiver` of EOS mainnet through `inline or deferred` transaction,
+you should send the inter-blockchain action as bellow:
 ``` 
-
+    name to = "ibcproxy.io"_n;  // Note: Don't transfer to bosibc.io
+    transfer_action_type action_data{ from, to, quantity, memo };
+    action( permission_level{ _self, "active"_n }, token_contract, "transfer"_n, action_data ).send();
 ```
-transfer 某个`token`合约（假设为xxx.token合约，可以使bosibc.io）内发行的token
-如果不适用ibc.proxy账户，your inline action or defered action should do like bellow 
+The memo string format is **{account_name}@{chain_name} {user-defined string}**. for more information refers to [User_Guide.md](../docs/User_Guide.md#2-transfer-action)
+And the {user-defined string} length should not more then 64;
 
-`inline action`
-``` 
-call contract `xxx.token`'s action `transfer` with parameters `<from>  bosibc.io <quantity> <account@chain notes string>`
+Then anyone or the relay accounts can send another transaction which contail only one action as bellow:
 ```
-
-
-but this will fail directly for `ibc.token` contract cannot accept inline ibc actions/transactions and you should 
-not send defered action/transactions in this way, for there is no related data in `block.log` so the ibc system will ignore it and your token will rollback to you finally.
-
-so instead your inline action should do like bellow
-
-
-`inline action`
-``` 
-call contract `xxx.token`'s action `transfer` with parameters `<from>  proxy2bosibc <quantity> <account@chain notes-string>`, 
-```
-then anyone or the relay accounts can send another transaction which contail only one action like bellow.
-
-`Transaction`
-```
-call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc bosibc.io <quantity> <account@chain notes-string  p_orig_trx_id=<trx id>  p_orig_from=<original from>  >`
-```
-p_orig_account 用于告诉ibc.token合约，原始账户是谁，以便ibc.token退款的时候直接退给该账户，而不需再经过proxy合约处理。
-
-如果是转回
-
-
-`Transaction`
-```
-call contract `proxy2bosibc`'s action `transfer` with parameters `proxy2bosibc <orig_from> <quantity> < p_orig_trx_id=<trx id> >`
+$cleos push action <ibc.proxy> transfer "[<ibc.proxy> <ibc.token> <quantity> <account@chain user-defined-notes-string orig_trxid=<trx id>  orig_from=<original from>>]"
+That is:
+$cleos push action ibcproxy.io transfer "[ibcproxy.io bosibc.io "10.0000 BOS" <eosreceiver@eos user-defined-notes-string orig_trxid=<trx id>  orig_from=bossender>]"
 ```
 
+**<quantity>** must equal to the original quantity user tansfers to ibcproxy.io;  
+**orig_trxid** must be the user triggerd original transaction's id;   
+**orig_from** must be the original transfer action's `from` account, 
+this parameter is used to tell `ibc.token` the original from account, 
+inorder to convenient returning the token to the original account instead of the proxy account when rollback ibc transactions;   
 
-ibc.token看到是来自proxy账户的转账，提取orig from，在orig_trx表中进行替换，需要在transfer_notify和withdraw两个表中进行修改。
-
-
-when sended, remove record.
-
- p_orig_from=<original from> 这两个是给 ibc.token合约用的
-
-### actions
-
-transfer_notify(from some token's contract action transfer)
-
-tansfer
-
-rollback
+If the above transaction fails for some reason, the token needs to be transferred back to the original account:
+```
+$cleos push action <ibc.proxy> transfer '[<ibc.proxy> <from> <quantity> "orig_trxid=<trx id>"]'
+That is:
+$cleos push action ibcproxy.io transfer '[ibcproxy.io bossender "10.0000 BOS" "orig_trxid=<trx id>"]'
+```
