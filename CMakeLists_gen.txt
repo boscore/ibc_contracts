@@ -34,6 +34,7 @@ HUB_PROTOCOL_SWITCH
 add_subdirectory(ibc.chain)
 add_subdirectory(ibc.token)
 add_subdirectory(ibc.proxy)
+add_subdirectory(test)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")

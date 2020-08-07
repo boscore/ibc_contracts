@@ -66,6 +66,9 @@ namespace eosio {
       void setadmin( name admin );
 
       [[eosio::action]]
+      void setproxy( name proxy );
+
+      [[eosio::action]]
       void regpeerchain( name           peerchain_name,
                          string         peerchain_info,
                          name           peerchain_ibc_token_contract,

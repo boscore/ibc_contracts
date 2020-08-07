@@ -53,7 +53,20 @@ namespace eosio {
 
    void token::setadmin( name admin ){
       require_auth( _self );
+      eosio_assert(is_account(admin), "admin account is not exist");
       _admin_st.admin = admin;
+   }
+
+   void token::setproxy( name proxy ){
+
+      eosio_assert(is_account(proxy), "proxy account is not exist");
+      if ( _proxy_st.proxy == name() ){
+         check_admin_auth();
+         _proxy_st.proxy = proxy;
+      } else {
+         require_auth( _self );
+         _proxy_st.proxy = proxy;
+      }
    }
 
    void token::setgactive( bool value ){
@@ -1883,7 +1896,7 @@ extern "C" {
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
-            (mvunrtotbl2)(rbkunrbktrx)
+            (setproxy)(mvunrtotbl2)(rbkunrbktrx)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)(rbkdiehubtrx)
 #endif
