@@ -69,6 +69,9 @@ namespace eosio {
       void setproxy( name proxy );
 
       [[eosio::action]]
+      void setprchproxy( name peerchain_name, name proxy_account);
+
+      [[eosio::action]]
       void regpeerchain( name           peerchain_name,
                          string         peerchain_info,
                          name           peerchain_ibc_token_contract,
@@ -371,6 +374,16 @@ namespace eosio {
                            (max_origtrxs_table_records)(cache_cashtrxs_table_records)(active))
       };
       eosio::multi_index< "peerchains"_n, peer_chain_state > _peerchains;
+
+      // code,scope (_self,_self)
+      struct [[eosio::table("peerchains2")]] peer_chain_state2 {
+         name           peerchain_name;
+         name           proxy_account;
+
+         uint64_t primary_key()const { return peerchain_name.value; }
+         EOSLIB_SERIALIZE( peer_chain_state2, (peerchain_name)(proxy_account))
+      };
+      eosio::multi_index< "peerchains2"_n, peer_chain_state2 > _peerchains2;
 
 
       // code,scope(_self,peerchain_name.value)

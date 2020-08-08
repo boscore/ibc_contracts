@@ -20,6 +20,7 @@ namespace eosio {
          _admin_sg(_self, _self.value),
          _proxy_sg(_self, _self.value),
          _peerchains( _self, _self.value ),
+         _peerchains2( _self, _self.value ),
          _freeaccount( _self, _self.value ),
          _peerchainm( _self, _self.value ),
          _accepts( _self, _self.value ),
@@ -58,7 +59,6 @@ namespace eosio {
    }
 
    void token::setproxy( name proxy ){
-
       eosio_assert(is_account(proxy), "proxy account is not exist");
       if ( _proxy_st.proxy == name() ){
          check_admin_auth();
@@ -66,6 +66,24 @@ namespace eosio {
       } else {
          require_auth( _self );
          _proxy_st.proxy = proxy;
+      }
+   }
+
+   void token::setprchproxy( name peerchain_name, name proxy_account){
+      auto itr = _peerchains.find( proxy_account.value );
+      eosio_assert( itr != _peerchains.end(), "peerchain has not registered");
+
+      auto itr2 = _peerchains2.find( proxy_account.value );
+      if ( itr2 == _peerchains2.end() ){
+         check_admin_auth();
+         _peerchains2.emplace( _self, [&]( auto& r ){
+            r.proxy_account = proxy_account;
+         });
+      } else {
+         require_auth( _self );
+         _peerchains2.modify( itr2, same_payer, [&]( auto& r ) {
+            r.proxy_account = proxy_account;
+         });
       }
    }
 
@@ -875,13 +893,20 @@ namespace eosio {
       if ( itr2 != _freeaccount.end() && args.from == itr2->peerchain_account ){
          from_free_account = true;
       }
+
+
+      name peerchain_proxy_account = pch.peerchain_ibc_token_contract;
+      auto pch2_ptr = _peerchains2.find( from_chain.value);
+      if ( pch2_ptr != _peerchains2.end() ){
+         peerchain_proxy_account = pch2_ptr->proxy_account;
+      }
       
       if ( ibc_transfer ){   // issue peg token to user
          const auto& st = get_currency_stats( sym.code() );
          eosio_assert( st.active, "not active");
          eosio_assert( st.peerchain_name == from_chain, "from_chain must equal to st.peerchain_name");
-         eosio_assert( actn.account == st.peerchain_contract || actn.account == pch.peerchain_ibc_token_contract,
-               "action.account not equal to st.peerchain_contract or pch.peerchain_ibc_token_contract.");
+         eosio_assert( actn.account == st.peerchain_contract || actn.account == pch.peerchain_ibc_token_contract || actn.account == peerchain_proxy_account,
+               "action.account not equal to st.peerchain_contract or pch.peerchain_ibc_token_contract or peerchain_proxy_account.");
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
          eosio_assert( quantity.amount > 0, "must issue positive quantity" );
@@ -907,7 +932,7 @@ namespace eosio {
       } else {  // withdraw accepted token to user
          const auto& acpt = get_currency_accept( quantity.symbol.code() );
          eosio_assert( acpt.active, "not active");
-         eosio_assert( pch.peerchain_ibc_token_contract == actn.account, "action.account not equal to pch.peerchain_ibc_token_contract.");
+         eosio_assert( actn.account == pch.peerchain_ibc_token_contract || actn.account == peerchain_proxy_account, "action.account not equal to pch.peerchain_ibc_token_contract or peerchain_proxy_account.");
 
          eosio_assert( quantity.is_valid(), "invalid quantity" );
          eosio_assert( quantity.amount > 0, "must issue positive quantity" );
@@ -1895,7 +1920,7 @@ extern "C" {
             (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
-            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)
+            (lockall)(unlockall)(forceinit)(open)(close)(unregtoken)(setfreeacnt)(setadmin)(setprchproxy)
             (setproxy)(mvunrtotbl2)(rbkunrbktrx)
 #ifdef HUB
             (hubinit)(feetransfer)(regpegtoken2)(rbkdiehubtrx)
