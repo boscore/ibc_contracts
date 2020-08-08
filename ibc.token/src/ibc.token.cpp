@@ -77,6 +77,7 @@ namespace eosio {
       if ( itr2 == _peerchains2.end() ){
          check_admin_auth();
          _peerchains2.emplace( _self, [&]( auto& r ){
+            r.peerchain_name = peerchain_name;
             r.proxy_account = proxy_account;
          });
       } else {
@@ -1077,7 +1078,7 @@ namespace eosio {
       if ( itr == _stats.end()){
          auto acpt = _accepts.get( sym_code_raw );
          auto account = src_trx.actions.front().account;
-         eosio_assert( account == _self || account == acpt.original_contract, "account == _self || account == acpt.original_contract assert failed");
+         eosio_assert( account == _self || account == acpt.original_contract || account == _proxy_st.proxy , "account should be _self or acpt.original_contract or _proxy_st.proxy");
       }
 
       if ( ibc_withdraw ){
