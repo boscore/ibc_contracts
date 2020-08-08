@@ -34,6 +34,9 @@ namespace eosio {
       [[eosio::action]]
       void transfer( name from, name to, asset quantity, string memo );
 
+      [[eosio::action]]
+      void mvtotrash( transaction_id_type orig_trx_id );
+
       struct [[eosio::table("globals")]] global_state {
          global_state(){}
          name              ibc_token_account;
@@ -61,7 +64,12 @@ namespace eosio {
       };
       eosio::multi_index< "proxytrxs"_n, proxy_trx_info,
       indexed_by<"trxid"_n, const_mem_fun<proxy_trx_info, fixed_bytes<32>, &proxy_trx_info::by_trx_id> >
-      >  _proxytrxs;
+      > _proxytrxs;
+
+      eosio::multi_index< "proxytrxs2"_n, proxy_trx_info,
+      indexed_by<"trxid"_n, const_mem_fun<proxy_trx_info, fixed_bytes<32>, &proxy_trx_info::by_trx_id> >
+      > _proxytrxs2;
+
    };
 
 } /// namespace eosio

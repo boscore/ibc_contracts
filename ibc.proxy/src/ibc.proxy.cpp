@@ -14,7 +14,8 @@ namespace eosio {
    proxy::proxy( name s, name code, datastream<const char*> ds ):
          contract( s, code, ds ),
          _global_state( _self, _self.value ),
-         _proxytrxs( _self, _self.value )
+         _proxytrxs( _self, _self.value ),
+         _proxytrxs2( _self, _self.value )
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
    }
@@ -95,13 +96,30 @@ namespace eosio {
       _proxytrxs.erase( *trx_p );
    }
 
+   void proxy::mvtotrash( transaction_id_type orig_trx_id ){
+
+      auto idx = _proxytrxs.get_index<"trxid"_n>();
+      const auto& trx_p = idx.find(fixed_bytes<32>(orig_trx_id.hash));
+      eosio_assert( trx_p != idx.end(), "transaction not found in table proxytrx.");
+
+      auto duration = 3600*2*12; // half a day
+      eosio_assert( get_block_time_slot() - trx_p->block_time_slot > duration, "you can't move this proxy transaction to trash within half a day");
+
+      auto idx2 = _proxytrxs2.get_index<"trxid"_n>();
+      const auto& trx_p2 = idx2.find(fixed_bytes<32>(orig_trx_id.hash));
+      eosio_assert( trx_p2 == idx2.end(), "transaction already exist in table proxytrx2");
+
+      _proxytrxs2.emplace( _self, [&]( auto& r ){ r = *trx_p; });
+      _proxytrxs.erase( *trx_p );
+   }
+
 } /// namespace eosio
 
 extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::proxy, (setglobal)(transfer))
+            EOSIO_DISPATCH_HELPER( eosio::proxy, (setglobal)(transfer)(mvtotrash))
          }
          return;
       }
