@@ -42,8 +42,10 @@ namespace eosio {
       eosio_assert( info.peerchain != name(),"peerchain not provide");
       eosio_assert( info.notes.length() <= 64,"memo string too long");
 
+      auto id = _proxytrxs.available_primary_key();
+      id = (id == 0 ? 1 : id);
       _proxytrxs.emplace( _self, [&]( auto& r ){
-         r.id              = _proxytrxs.available_primary_key();
+         r.id              = id;
          r.orig_trx_id     = get_trx_id();
          r.block_time_slot = get_block_time_slot();
          r.token_contract  = token_contract;
