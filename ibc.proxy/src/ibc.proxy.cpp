@@ -58,6 +58,7 @@ namespace eosio {
       eosio_assert( from == _self, "from must be _self");
 
       string orig_trxid_str = get_value_str_by_key_str( memo, key_orig_trxid );
+      eosio_assert( ! orig_trxid_str.empty(), ("key: " + key_orig_trxid + " not exist in memo string").c_str());
       capi_checksum256 orig_trx_id = string_to_capi_checksum256( orig_trxid_str );
 
       auto idx = _proxytrxs.get_index<"trxid"_n>();
@@ -77,6 +78,7 @@ namespace eosio {
       eosio_assert( to == _gstate.ibc_token_account, "to must be ibc_token_account");
 
       name orig_from = name( get_value_str_by_key_str( memo, key_orig_from ));
+      eosio_assert( orig_from != name(), ("key: " + key_orig_from + " not exist in memo string").c_str());
       eosio_assert( orig_from == trx_p->orig_from, "orig_from == trx_p->from assert failed");
 
       string correct_memo_str = trx_p->orig_memo + " " +
