@@ -70,10 +70,10 @@ namespace eosio {
    }
 
    void token::setprchproxy( name peerchain_name, name proxy_account){
-      auto itr = _peerchains.find( proxy_account.value );
+      auto itr = _peerchains.find( peerchain_name.value );
       eosio_assert( itr != _peerchains.end(), "peerchain has not registered");
 
-      auto itr2 = _peerchains2.find( proxy_account.value );
+      auto itr2 = _peerchains2.find( peerchain_name.value );
       if ( itr2 == _peerchains2.end() ){
          check_admin_auth();
          _peerchains2.emplace( _self, [&]( auto& r ){
