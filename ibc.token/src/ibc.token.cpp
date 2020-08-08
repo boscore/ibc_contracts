@@ -492,12 +492,12 @@ namespace eosio {
          read_transaction(trx_bytes.data(), trx_size);
          sha256( trx_bytes.data(), trx_size, &trx_id );
          auto trx = unpack<transaction>(trx_bytes.data(), trx_size);
-         eosio_assert( trx.actions.size() == 1, "transction contains more then one action");
+         eosio_assert( trx.actions.size() == 1, "Fatal: inline action not supported: transction contains more then one action");
          auto first_action = trx.actions.front();
-         eosio_assert( first_action.name == "transfer"_n, "first_action.name != transfer");
+         eosio_assert( first_action.name == "transfer"_n, "Fatal: inline action not supported: first_action.name != transfer");
          transfer_action_type args = unpack<transfer_action_type>( first_action.data );
          eosio_assert(args.from == from && args.to == to &&
-                      args.quantity == quantity && args.memo == memo, "ibc action can't be inline action");
+                      args.quantity == quantity && args.memo == memo, "Fatal: inline action not supported");
       }
 
       if ( memo.find("local") == 0 ){
