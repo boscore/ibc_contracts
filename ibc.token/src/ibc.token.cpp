@@ -431,17 +431,35 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
-   void token::setpegtkfee( symbol_code symcode, asset fee) {
+   void token::setpegtkfee( symbol_code symcode,
+                            name   kind,
+                            name   fee_mode,
+                            asset  fee_fixed,
+                            double fee_ratio ) {
       check_admin_auth();
 
       const auto& st = get_currency_stats( symcode );
-      eosio_assert( fee.symbol == st.supply.symbol && fee.amount >= 0, "service_fee_fixed invalid" );
-      eosio_assert( fee.amount * 10 <= st.min_once_withdraw.amount, "failed_fee.amount * 10 <= min_once_withdraw.amount assert failed");
+      eosio_assert( fee_mode == "fixed"_n || fee_mode == "ratio"_n, "mode can only be fixed or ratio");
+      eosio_assert( fee_fixed.symbol == st.supply.symbol && fee_fixed.amount >= 0, "service_fee_fixed invalid" );
+      eosio_assert( 0 <= fee_ratio && fee_ratio <= 0.05 , "service_fee_ratio invalid");
 
-      _stats.modify( st, same_payer, [&]( auto& r ) {
-         r.failed_fee   = fee;
-      });
+      if ( kind == "success"_n ){
+         eosio_assert( fee_fixed.amount * 5 <= st.min_once_withdraw.amount, "service_fee_fixed.amount * 5 <= min_once_withdraw.amount assert failed");
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.service_fee_mode  = fee_mode;
+            r.service_fee_fixed = fee_fixed;
+            r.service_fee_ratio = fee_ratio;
+         });
+      } else if ( kind == "failed"_n ){
+         eosio_assert( fee_fixed.amount * 10 <= st.min_once_withdraw.amount, "failed_fee.amount * 10 <= min_once_withdraw.amount assert failed");
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.failed_fee = fee_fixed;
+         });
+      } else {
+         eosio_assert( false, "kind must be \"success\" or \"failed\"");
+      }
    }
+
 
    void token::unregtoken( name table, symbol_code sym_code ){
       check_admin_auth();
@@ -923,9 +941,32 @@ namespace eosio {
          });
 
          add_balance( _self, new_quantity, _self );
+
+         int64_t diff = 0;
+         if ( to != pch.thischain_free_account && (! from_free_account) ){
+            if ( st.service_fee_mode == "fixed"_n ){
+               diff = st.service_fee_fixed.amount;
+            } else {
+               diff = int64_t( new_quantity.amount * st.service_fee_ratio );
+            }
+         }
+
+         eosio_assert( diff >= 0, "internal error, service_fee_ratio config error.");
+
+         auto final_quantity = asset( 0, st.supply.symbol );
+         auto fee_quantity = asset( 0, st.supply.symbol );
+
+         final_quantity.amount = new_quantity.amount > diff ? new_quantity.amount - diff : 1; // 1 is used to avoid withdraw failure
+         fee_quantity.amount = new_quantity.amount - final_quantity.amount;
+
+         if ( relay != _self ){
+            transfer_action_type action_data{ _self, relay, fee_quantity, "send ibc trx fee to relay account." };
+            action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
+         }
+
          if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
             if ( memo_info.notes.size() > 250 ) memo_info.notes.resize( 250 );
-            transfer_action_type action_data{ _self, to, new_quantity, memo_info.notes };
+            transfer_action_type action_data{ _self, to, final_quantity, memo_info.notes };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
 
@@ -951,6 +992,12 @@ namespace eosio {
             chain.balance -= new_quantity;
          });
 
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= new_quantity;
+            r.total_cash += new_quantity;
+            r.total_cash_times += 1;
+         });
+
          int64_t diff = 0;
          if ( to != pch.thischain_free_account && (! from_free_account) ){
             if ( acpt.service_fee_mode == "fixed"_n ){
@@ -961,14 +1008,17 @@ namespace eosio {
          }
 
          eosio_assert( diff >= 0, "internal error, service_fee_ratio config error");
-         new_quantity.amount = new_quantity.amount > diff ? new_quantity.amount - diff : 1; // 1 is used to avoid withdraw failure
-         eosio_assert( new_quantity.amount > 0, "must issue positive quantity" );
 
-         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
-            r.accept -= new_quantity;
-            r.total_cash += new_quantity;
-            r.total_cash_times += 1;
-         });
+         auto final_quantity = asset( 0, acpt.accept.symbol  );
+         auto fee_quantity = asset( 0, acpt.accept.symbol );
+
+         final_quantity.amount = new_quantity.amount > diff ? new_quantity.amount - diff : 1; // 1 is used to avoid withdraw failure
+         fee_quantity.amount = new_quantity.amount - final_quantity.amount;
+
+         if ( relay != _self ){
+            transfer_action_type action_data{ _self, relay, fee_quantity, "send ibc trx fee to relay account" };
+            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
+         }
 
          if( to != _self ) {  /// @tag 1: important 'to != _self' logic, avoid inline invoke action 'transfer_notify' or 'withdraw'
             bool jump = false;
@@ -978,7 +1028,7 @@ namespace eosio {
 
             if ( ! jump ){
                if ( memo_info.notes.size() > 250 ) memo_info.notes.resize( 250 );
-               transfer_action_type action_data{ _self, to, new_quantity, memo_info.notes };
+               transfer_action_type action_data{ _self, to, final_quantity, memo_info.notes };
                action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
             }
          }

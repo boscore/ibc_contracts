@@ -161,7 +161,11 @@ namespace eosio {
       void setpegbool( symbol_code symcode, string which, bool value );
 
       [[eosio::action]]
-      void setpegtkfee( symbol_code symcode, asset fee );
+      void setpegtkfee( symbol_code symcode,
+                        name   kind,
+                        name   fee_mode,
+                        asset  fee_fixed,
+                        double fee_ratio );
 
       [[eosio::action]]
       void unregtoken( name table, symbol_code sym_code );
