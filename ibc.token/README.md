@@ -321,13 +321,20 @@ Modify only one member of type `bool` in currency_stats struct.
 
 #### setpegtkfee
 ``` 
-  void setpegtkfee( symbol_code symcode, asset fee )
+  void setpegtkfee( symbol_code symcode,
+                   name   kind,
+                   name   fee_mode,
+                   asset  fee_fixed,
+                   double fee_ratio );
 ```
 Modify fee related members in currency_stats struct.
- - **symcode** the symcode of registered pegged token.
- - **fee** fixed fee quota
+ - **symcode**  the symcode of registered pegged token.
+ - **kind** must be "success" or "failed".
+ - **fee_mode** must be "fixed" or "ratio".
+ - **fee_fixed** fixed fee quota, used when fee_mode == fixed
+ - **fee_ratio** charge ratio, used when fee_mode == ratio
  - require auth of _self or admin
-
+ 
 #### unregtoken
 ``` 
    void unregtoken( name table, symbol_code sym_code );
